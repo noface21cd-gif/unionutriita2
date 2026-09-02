@@ -13,6 +13,7 @@ import { createClient } from "../lib/supabase/client";
 import type { PostConAutor } from "../lib/types";
 
 import CommentSection from "./CommentSection";
+import ReportButton from "./ReportButton";
 
 type Props = {
   post: PostConAutor;
@@ -23,22 +24,30 @@ export default function PostCard({
   post,
   currentUserId,
 }: Props) {
-  const [menuAbierto, setMenuAbierto] =
-    useState(false);
+  const [
+    menuAbierto,
+    setMenuAbierto,
+  ] = useState(false);
 
   const [
     comentariosAbiertos,
     setComentariosAbiertos,
   ] = useState(false);
 
-  const [liked, setLiked] =
-    useState(false);
+  const [
+    liked,
+    setLiked,
+  ] = useState(false);
 
-  const [saved, setSaved] =
-    useState(false);
+  const [
+    saved,
+    setSaved,
+  ] = useState(false);
 
-  const [likes, setLikes] =
-    useState(0);
+  const [
+    likes,
+    setLikes,
+  ] = useState(0);
 
   const [
     comentariosCount,
@@ -55,8 +64,10 @@ export default function PostCard({
     setProcesandoSave,
   ] = useState(false);
 
-  const [eliminando, setEliminando] =
-    useState(false);
+  const [
+    eliminando,
+    setEliminando,
+  ] = useState(false);
 
   const menuRef =
     useRef<HTMLDivElement | null>(
@@ -88,13 +99,16 @@ export default function PostCard({
 
   const fecha = new Date(
     post.created_at
-  ).toLocaleString("es-MX", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  ).toLocaleString(
+    "es-MX",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }
+  );
 
   const fueEditado =
     post.updated_at !==
@@ -110,7 +124,9 @@ export default function PostCard({
           event.target as Node
         )
       ) {
-        setMenuAbierto(false);
+        setMenuAbierto(
+          false
+        );
       }
     }
 
@@ -250,7 +266,9 @@ export default function PostCard({
       return;
     }
 
-    setProcesandoLike(true);
+    setProcesandoLike(
+      true
+    );
 
     const supabase =
       createClient();
@@ -276,11 +294,12 @@ export default function PostCard({
 
         setLiked(false);
 
-        setLikes((actual) =>
-          Math.max(
-            0,
-            actual - 1
-          )
+        setLikes(
+          (actual) =>
+            Math.max(
+              0,
+              actual - 1
+            )
         );
       } else {
         const { error } =
@@ -289,6 +308,7 @@ export default function PostCard({
             .insert({
               post_id:
                 post.id,
+
               user_id:
                 currentUserId,
             });
@@ -311,7 +331,9 @@ export default function PostCard({
           : "No pudimos actualizar el Me gusta."
       );
     } finally {
-      setProcesandoLike(false);
+      setProcesandoLike(
+        false
+      );
     }
   }
 
@@ -323,7 +345,9 @@ export default function PostCard({
       return;
     }
 
-    setProcesandoSave(true);
+    setProcesandoSave(
+      true
+    );
 
     const supabase =
       createClient();
@@ -355,6 +379,7 @@ export default function PostCard({
             .insert({
               post_id:
                 post.id,
+
               user_id:
                 currentUserId,
             });
@@ -372,7 +397,9 @@ export default function PostCard({
           : "No pudimos guardar la publicación."
       );
     } finally {
-      setProcesandoSave(false);
+      setProcesandoSave(
+        false
+      );
     }
   }
 
@@ -400,6 +427,7 @@ export default function PostCard({
       if (!user) {
         window.location.href =
           "/login";
+
         return;
       }
 
@@ -407,7 +435,10 @@ export default function PostCard({
         await supabase
           .from("posts")
           .delete()
-          .eq("id", post.id)
+          .eq(
+            "id",
+            post.id
+          )
           .eq(
             "user_id",
             user.id
@@ -442,7 +473,9 @@ export default function PostCard({
               alt={`Foto de ${nombre}`}
             />
           ) : (
-            <span>🦦</span>
+            <span>
+              🦦
+            </span>
           )}
         </Link>
 
@@ -476,8 +509,11 @@ export default function PostCard({
         <div
           ref={menuRef}
           style={{
-            position: "relative",
-            marginLeft: "auto",
+            position:
+              "relative",
+
+            marginLeft:
+              "auto",
           }}
         >
           <button
@@ -497,17 +533,31 @@ export default function PostCard({
               style={{
                 position:
                   "absolute",
-                top: "34px",
-                right: 0,
-                zIndex: 20,
-                width: "170px",
-                padding: "7px",
+
+                top:
+                  "34px",
+
+                right:
+                  0,
+
+                zIndex:
+                  20,
+
+                width:
+                  "180px",
+
+                padding:
+                  "7px",
+
                 border:
                   "1px solid #e5ddcf",
+
                 borderRadius:
                   "14px",
+
                 background:
                   "#fffdf9",
+
                 boxShadow:
                   "0 12px 35px rgba(66,58,43,.14)",
               }}
@@ -519,8 +569,10 @@ export default function PostCard({
                     style={{
                       display:
                         "block",
+
                       padding:
                         "10px",
+
                       textDecoration:
                         "none",
                     }}
@@ -539,15 +591,24 @@ export default function PostCard({
                     style={{
                       width:
                         "100%",
+
                       padding:
                         "10px",
-                      border: 0,
+
+                      border:
+                        0,
+
                       background:
                         "transparent",
+
                       color:
                         "#a75f59",
+
                       textAlign:
                         "left",
+
+                      cursor:
+                        "pointer",
                     }}
                   >
                     {eliminando
@@ -556,25 +617,15 @@ export default function PostCard({
                   </button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  disabled
-                  style={{
-                    width:
-                      "100%",
-                    padding:
-                      "10px",
-                    border: 0,
-                    background:
-                      "transparent",
-                    color:
-                      "#969188",
-                    textAlign:
-                      "left",
-                  }}
-                >
-                  🚩 Reportar
-                </button>
+                <ReportButton
+                  targetId={
+                    post.id
+                  }
+                  targetType="post"
+                  currentUserId={
+                    currentUserId
+                  }
+                />
               )}
             </div>
           )}
@@ -593,13 +644,18 @@ export default function PostCard({
       <div className="actions">
         <button
           type="button"
-          onClick={toggleLike}
+          onClick={
+            toggleLike
+          }
           disabled={
             procesandoLike
           }
         >
-          {liked ? "♥" : "♡"}{" "}
+          {liked
+            ? "♥"
+            : "♡"}{" "}
           Me gusta
+
           {likes > 0
             ? ` · ${likes}`
             : ""}
@@ -614,6 +670,7 @@ export default function PostCard({
           }
         >
           💬 Comentar
+
           {comentariosCount >
           0
             ? ` · ${comentariosCount}`
@@ -637,7 +694,9 @@ export default function PostCard({
 
       {comentariosAbiertos && (
         <CommentSection
-          postId={post.id}
+          postId={
+            post.id
+          }
           currentUserId={
             currentUserId
           }
@@ -649,5 +708,3 @@ export default function PostCard({
     </article>
   );
 }
-
-
