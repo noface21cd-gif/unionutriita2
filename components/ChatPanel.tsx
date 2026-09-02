@@ -151,14 +151,15 @@ export default function ChatPanel({
           return;
         }
 
-        const idsAutores = [
-          ...new Set(
-            mensajesBase.map(
-              (mensaje) =>
-                mensaje.user_id
+        const idsAutores =
+          Array.from(
+            new Set(
+              mensajesBase.map(
+                (mensaje) =>
+                  mensaje.user_id
+              )
             )
-          ),
-        ];
+          );
 
         const {
           data: autoresData,

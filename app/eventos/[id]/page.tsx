@@ -55,12 +55,18 @@ export default function EventoPage() {
     setCurrentUserId,
   ] = useState("");
 
-  const [evento, setEvento] =
+  const [
+    evento,
+    setEvento,
+  ] =
     useState<Evento | null>(
       null
     );
 
-  const [creador, setCreador] =
+  const [
+    creador,
+    setCreador,
+  ] =
     useState<PerfilMini | null>(
       null
     );
@@ -68,27 +74,33 @@ export default function EventoPage() {
   const [
     asistentes,
     setAsistentes,
-  ] = useState<Asistente[]>(
-    []
-  );
+  ] =
+    useState<Asistente[]>(
+      []
+    );
 
   const [
     perfilesAsistentes,
     setPerfilesAsistentes,
-  ] = useState<PerfilMini[]>(
-    []
-  );
+  ] =
+    useState<PerfilMini[]>(
+      []
+    );
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
 
   const [
     procesando,
     setProcesando,
   ] = useState(false);
 
-  const [mensaje, setMensaje] =
-    useState("");
+  const [
+    mensaje,
+    setMensaje,
+  ] = useState("");
 
   async function cargarAsistentes(
     eventoActual: Evento
@@ -110,11 +122,16 @@ export default function EventoPage() {
         "event_id",
         eventoActual.id
       )
-      .order("created_at", {
-        ascending: true,
-      });
+      .order(
+        "created_at",
+        {
+          ascending: true,
+        }
+      );
 
-    if (asistentesError) {
+    if (
+      asistentesError
+    ) {
       throw new Error(
         asistentesError.message
       );
@@ -124,21 +141,26 @@ export default function EventoPage() {
       (asistentesData ||
         []) as Asistente[];
 
-    setAsistentes(lista);
+    setAsistentes(
+      lista
+    );
 
     if (
-      lista.length === 0
+      lista.length ===
+      0
     ) {
       setPerfilesAsistentes(
         []
       );
+
       return;
     }
 
-    const ids = lista.map(
-      (item) =>
-        item.user_id
-    );
+    const ids =
+      lista.map(
+        (item) =>
+          item.user_id
+      );
 
     const {
       data: perfilesData,
@@ -151,17 +173,52 @@ export default function EventoPage() {
         nombre,
         avatar_url
       `)
-      .in("id", ids);
+      .in(
+        "id",
+        ids
+      );
 
-    if (perfilesError) {
+    if (
+      perfilesError
+    ) {
       throw new Error(
         perfilesError.message
       );
     }
 
-    setPerfilesAsistentes(
+    const perfiles =
       (perfilesData ||
-        []) as PerfilMini[]
+        []) as PerfilMini[];
+
+    const mapa =
+      new Map<
+        string,
+        PerfilMini
+      >();
+
+    perfiles.forEach(
+      (perfil) => {
+        mapa.set(
+          perfil.id,
+          perfil
+        );
+      }
+    );
+
+    const perfilesOrdenados =
+      lista
+        .map(
+          (asistente) =>
+            mapa.get(
+              asistente.user_id
+            )
+        )
+        .filter(
+          Boolean
+        ) as PerfilMini[];
+
+    setPerfilesAsistentes(
+      perfilesOrdenados
     );
   }
 
@@ -173,7 +230,10 @@ export default function EventoPage() {
         const user =
           await requerirUsuario();
 
-        if (!user || !activo) {
+        if (
+          !user ||
+          !activo
+        ) {
           return;
         }
 
@@ -206,13 +266,17 @@ export default function EventoPage() {
           )
           .maybeSingle();
 
-        if (eventoError) {
+        if (
+          eventoError
+        ) {
           throw new Error(
             eventoError.message
           );
         }
 
-        if (!eventoData) {
+        if (
+          !eventoData
+        ) {
           throw new Error(
             "Este evento no existe."
           );
@@ -246,13 +310,17 @@ export default function EventoPage() {
           )
           .maybeSingle();
 
-        if (creadorError) {
+        if (
+          creadorError
+        ) {
           throw new Error(
             creadorError.message
           );
         }
 
-        if (creadorData) {
+        if (
+          creadorData
+        ) {
           setCreador(
             creadorData as PerfilMini
           );
@@ -273,7 +341,9 @@ export default function EventoPage() {
         );
       } finally {
         if (activo) {
-          setCargando(false);
+          setCargando(
+            false
+          );
         }
       }
     }
@@ -304,6 +374,90 @@ export default function EventoPage() {
     asistentes.length >=
       evento.cupo;
 
+  const lugaresDisponibles =
+    evento?.cupo
+      ? Math.max(
+          0,
+          evento.cupo -
+            asistentes.length
+        )
+      : null;
+
+  const porcentajeCupo =
+    evento?.cupo
+      ? Math.min(
+          100,
+          Math.round(
+            (asistentes.length /
+              evento.cupo) *
+              100
+          )
+        )
+      : 0;
+
+  const ahora =
+    Date.now();
+
+  const inicioEvento =
+    evento
+      ? new Date(
+          evento.fecha_inicio
+        ).getTime()
+      : 0;
+
+  const finEvento =
+    evento?.fecha_fin
+      ? new Date(
+          evento.fecha_fin
+        ).getTime()
+      : null;
+
+  const finalizado =
+    finEvento !== null &&
+    ahora > finEvento;
+
+  const yaInicio =
+    ahora >= inicioEvento;
+
+  function estadoEvento() {
+    if (finalizado) {
+      return {
+        texto:
+          "Finalizado",
+        icono:
+          "✓",
+        fondo:
+          "#f3f0e8",
+        color:
+          "#686e63",
+      };
+    }
+
+    if (yaInicio) {
+      return {
+        texto:
+          "En curso",
+        icono:
+          "🟢",
+        fondo:
+          "#e5eedc",
+        color:
+          "#506347",
+      };
+    }
+
+    return {
+      texto:
+        "Próximo",
+      icono:
+        "📅",
+      fondo:
+        "#f8e7c7",
+      color:
+        "#715d3d",
+    };
+  }
+
   async function confirmarAsistencia() {
     if (!evento) {
       return;
@@ -316,6 +470,7 @@ export default function EventoPage() {
       alert(
         "El evento ya alcanzó su cupo."
       );
+
       return;
     }
 
@@ -467,12 +622,40 @@ export default function EventoPage() {
     ).toLocaleString(
       "es-MX",
       {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
+        weekday:
+          "long",
+
+        day:
+          "numeric",
+
+        month:
+          "long",
+
+        year:
+          "numeric",
+
+        hour:
+          "numeric",
+
+        minute:
+          "2-digit",
+      }
+    );
+  }
+
+  function fechaCorta(
+    fecha: string
+  ) {
+    return new Date(
+      fecha
+    ).toLocaleDateString(
+      "es-MX",
+      {
+        day:
+          "numeric",
+
+        month:
+          "short",
       }
     );
   }
@@ -501,312 +684,1441 @@ export default function EventoPage() {
             🎉
           </div>
 
+          <p className="profileEyebrow">
+            EVENTOS
+          </p>
+
           <h1>
             Evento no encontrado
           </h1>
 
-          <div className="errorBox">
-            {mensaje}
-          </div>
+          <p
+            style={{
+              color:
+                "#70746a",
+
+              lineHeight:
+                1.5,
+            }}
+          >
+            Puede que este evento
+            haya sido eliminado o
+            que el enlace sea
+            incorrecto.
+          </p>
+
+          {mensaje && (
+            <div className="errorBox">
+              {mensaje}
+            </div>
+          )}
 
           <Link
             href="/eventos"
             className="backHomeButton"
           >
-            Volver a eventos
+            ← Volver a Eventos
           </Link>
         </section>
       </main>
     );
   }
 
+  const estado =
+    estadoEvento();
+
   return (
-    <main className="content">
-      <section className="welcome">
-        <div>
-          <p className="tiny">
-            EVENTO
-          </p>
+    <div className="app">
+      <header className="topbar">
+        <Link
+          href="/"
+          className="brand"
+        >
+          <span className="logo">
+            🦦
+          </span>
 
-          <h2>
-            {evento.titulo}
-          </h2>
+          <div>
+            <h1>
+              Uniónutriita
+            </h1>
 
-          <p>
-            {evento.descripcion ||
-              "Sin descripción."}
-          </p>
+            <p>
+              Comunidad ENES Oaxaca
+            </p>
+          </div>
+        </Link>
+
+        <div className="topActions">
+          <Link
+            href="/buscar"
+            className="circleButton"
+            aria-label="Buscar"
+            title="Buscar"
+          >
+            🔎
+          </Link>
+
+          <Link
+            href="/notificaciones"
+            className="circleButton"
+            aria-label="Notificaciones"
+            title="Notificaciones"
+          >
+            🔔
+          </Link>
+
+          <Link
+            href="/perfil"
+            className="profileButton profileLink"
+            aria-label="Mi perfil"
+            title="Mi perfil"
+          >
+            👤
+          </Link>
         </div>
+      </header>
 
-        <div className="welcomeOtter">
-          🎉
-        </div>
-      </section>
-
-      <section
-        className="profileCard"
-        style={{
-          maxWidth: "780px",
-          marginTop: "24px",
-        }}
-      >
-        <p>
-          <strong>
-            📅 Inicio
-          </strong>
-          <br />
-          {fechaBonita(
-            evento.fecha_inicio
-          )}
-        </p>
-
-        {evento.fecha_fin && (
-          <p>
-            <strong>
-              🕐 Finaliza
-            </strong>
-            <br />
-            {fechaBonita(
-              evento.fecha_fin
-            )}
+      <div className="layout">
+        <aside className="sidebar">
+          <p className="sidebarTitle">
+            Explorar
           </p>
-        )}
 
-        <p>
-          <strong>
-            📍 Lugar
-          </strong>
-          <br />
-          {evento.lugar}
-        </p>
+          <Link
+            href="/"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🏠
+            </span>
 
-        <p>
-          <strong>
-            👥 Asistentes
-          </strong>
-          <br />
+            Inicio
+          </Link>
 
-          {asistentes.length}
+          <Link
+            href="/buscar"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔎
+            </span>
 
-          {evento.cupo
-            ? ` / ${evento.cupo}`
-            : ""}
-        </p>
+            Buscar
+          </Link>
 
-        {creador && (
+          <Link
+            href="/estudio"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              📚
+            </span>
+
+            Estudio
+          </Link>
+
+          <Link
+            href="/comunidades"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🫂
+            </span>
+
+            Comunidades
+          </Link>
+
+          <Link
+            href="/eventos"
+            className="menuButton selected"
+          >
+            <span className="menuIcon">
+              🎉
+            </span>
+
+            Eventos
+          </Link>
+
+          <Link
+            href="/conexiones"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🤝
+            </span>
+
+            Conexiones
+          </Link>
+
+          <Link
+            href="/guardados"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔖
+            </span>
+
+            Guardados
+          </Link>
+
+          <Link
+            href="/social"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🌿
+            </span>
+
+            Social
+          </Link>
+
+          <p
+            className="sidebarTitle"
+            style={{
+              marginTop:
+                "24px",
+            }}
+          >
+            Tu cuenta
+          </p>
+
+          <Link
+            href="/notificaciones"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔔
+            </span>
+
+            Notificaciones
+          </Link>
+
+          <Link
+            href="/perfil"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              👤
+            </span>
+
+            Mi perfil
+          </Link>
+
+          <div className="otterCard">
+            <span className="bigOtter">
+              🎉
+            </span>
+
+            <div>
+              <strong>
+                Agenda
+              </strong>
+
+              <p>
+                Vive el campus
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <main className="content">
+          <section className="welcome">
+            <div>
+              <div
+                style={{
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  gap:
+                    "8px",
+
+                  flexWrap:
+                    "wrap",
+
+                  marginBottom:
+                    "7px",
+                }}
+              >
+                <p
+                  className="tiny"
+                  style={{
+                    margin: 0,
+                  }}
+                >
+                  EVENTO
+                </p>
+
+                <span
+                  style={{
+                    padding:
+                      "5px 8px",
+
+                    borderRadius:
+                      "999px",
+
+                    background:
+                      estado.fondo,
+
+                    color:
+                      estado.color,
+
+                    fontSize:
+                      "10px",
+
+                    fontWeight:
+                      800,
+                  }}
+                >
+                  {estado.icono}{" "}
+                  {estado.texto}
+                </span>
+
+                {asisto && (
+                  <span
+                    style={{
+                      padding:
+                        "5px 8px",
+
+                      borderRadius:
+                        "999px",
+
+                      background:
+                        "#e5eedc",
+
+                      color:
+                        "#506347",
+
+                      fontSize:
+                        "10px",
+
+                      fontWeight:
+                        800,
+                    }}
+                  >
+                    ✓ Vas a asistir
+                  </span>
+                )}
+
+                {esCreador && (
+                  <span
+                    style={{
+                      padding:
+                        "5px 8px",
+
+                      borderRadius:
+                        "999px",
+
+                      background:
+                        "#f8e7c7",
+
+                      color:
+                        "#715d3d",
+
+                      fontSize:
+                        "10px",
+
+                      fontWeight:
+                        800,
+                    }}
+                  >
+                    ★ Tu evento
+                  </span>
+                )}
+              </div>
+
+              <h2>
+                {evento.titulo}
+              </h2>
+
+              <p>
+                {evento.descripcion ||
+                  "El organizador todavía no agregó una descripción para este evento."}
+              </p>
+            </div>
+
+            <div className="welcomeOtter">
+              🎉
+            </div>
+          </section>
+
           <div
             style={{
-              display: "flex",
-              alignItems:
-                "center",
-              gap: "10px",
+              display:
+                "flex",
+
+              gap:
+                "8px",
+
+              flexWrap:
+                "wrap",
+
               marginTop:
                 "20px",
             }}
           >
             <Link
-              href={`/u/${creador.username}`}
-              className="avatar"
+              href="/eventos"
+              className="backHomeButton"
             >
-              {creador.avatar_url ? (
-                <img
-                  src={
-                    creador.avatar_url
-                  }
-                  alt={
-                    creador.nombre ||
-                    "Organizador"
-                  }
-                />
-              ) : (
-                <span>
-                  🦦
-                </span>
-              )}
+              ← Eventos
             </Link>
 
-            <div>
-              <span
+            <Link
+              href="/"
+              className="backHomeButton"
+            >
+              🏠 Inicio
+            </Link>
+          </div>
+
+          {mensaje && (
+            <div
+              className="errorBox"
+              style={{
+                marginTop:
+                  "18px",
+              }}
+            >
+              {mensaje}
+            </div>
+          )}
+
+          <section
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "minmax(0, 1.5fr) minmax(260px, 0.8fr)",
+
+              gap:
+                "14px",
+
+              marginTop:
+                "24px",
+            }}
+            className="eventDetailGrid"
+          >
+            <article
+              className="card"
+              style={{
+                padding:
+                  "22px",
+              }}
+            >
+              <div
                 style={{
-                  color:
-                    "#969188",
-                  fontSize:
-                    "11px",
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "space-between",
+
+                  gap:
+                    "12px",
+
+                  flexWrap:
+                    "wrap",
                 }}
               >
-                ORGANIZA
-              </span>
+                <div>
+                  <p className="tiny">
+                    INFORMACIÓN
+                  </p>
 
-              <div>
-                <strong>
-                  {creador.nombre ||
-                    "Estudiante"}
-                </strong>
+                  <h3
+                    style={{
+                      margin:
+                        "5px 0 0",
+                    }}
+                  >
+                    Detalles del evento
+                  </h3>
+                </div>
+
+                <span
+                  className="cardIcon"
+                  style={{
+                    fontSize:
+                      "23px",
+                  }}
+                >
+                  🗓️
+                </span>
               </div>
 
-              <small>
-                @
-                {creador.username ||
-                  "usuario"}
-              </small>
-            </div>
-          </div>
-        )}
+              <div
+                style={{
+                  display:
+                    "grid",
 
-        {!esCreador &&
-          !asisto && (
-            <button
-              type="button"
-              className="editProfileButton"
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(180px, 1fr))",
+
+                  gap:
+                    "10px",
+
+                  marginTop:
+                    "18px",
+                }}
+              >
+                <div
+                  style={{
+                    padding:
+                      "14px",
+
+                    borderRadius:
+                      "13px",
+
+                    background:
+                      "#f7f4ee",
+                  }}
+                >
+                  <span
+                    style={{
+                      display:
+                        "block",
+
+                      color:
+                        "#969188",
+
+                      fontSize:
+                        "9px",
+
+                      fontWeight:
+                        800,
+
+                      letterSpacing:
+                        "0.5px",
+                    }}
+                  >
+                    INICIO
+                  </span>
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+
+                      marginTop:
+                        "6px",
+
+                      fontSize:
+                        "12px",
+
+                      lineHeight:
+                        1.5,
+                    }}
+                  >
+                    📅{" "}
+                    {fechaBonita(
+                      evento.fecha_inicio
+                    )}
+                  </strong>
+                </div>
+
+                {evento.fecha_fin && (
+                  <div
+                    style={{
+                      padding:
+                        "14px",
+
+                      borderRadius:
+                        "13px",
+
+                      background:
+                        "#f7f4ee",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display:
+                          "block",
+
+                        color:
+                          "#969188",
+
+                        fontSize:
+                          "9px",
+
+                        fontWeight:
+                          800,
+
+                        letterSpacing:
+                          "0.5px",
+                      }}
+                    >
+                      FINALIZA
+                    </span>
+
+                    <strong
+                      style={{
+                        display:
+                          "block",
+
+                        marginTop:
+                          "6px",
+
+                        fontSize:
+                          "12px",
+
+                        lineHeight:
+                          1.5,
+                      }}
+                    >
+                      🕐{" "}
+                      {fechaBonita(
+                        evento.fecha_fin
+                      )}
+                    </strong>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    padding:
+                      "14px",
+
+                    borderRadius:
+                      "13px",
+
+                    background:
+                      "#f7f4ee",
+                  }}
+                >
+                  <span
+                    style={{
+                      display:
+                        "block",
+
+                      color:
+                        "#969188",
+
+                      fontSize:
+                        "9px",
+
+                      fontWeight:
+                        800,
+
+                      letterSpacing:
+                        "0.5px",
+                    }}
+                  >
+                    LUGAR
+                  </span>
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+
+                      marginTop:
+                        "6px",
+
+                      fontSize:
+                        "12px",
+
+                      lineHeight:
+                        1.5,
+
+                      overflowWrap:
+                        "anywhere",
+                    }}
+                  >
+                    📍{" "}
+                    {evento.lugar}
+                  </strong>
+                </div>
+
+                <div
+                  style={{
+                    padding:
+                      "14px",
+
+                    borderRadius:
+                      "13px",
+
+                    background:
+                      "#f7f4ee",
+                  }}
+                >
+                  <span
+                    style={{
+                      display:
+                        "block",
+
+                      color:
+                        "#969188",
+
+                      fontSize:
+                        "9px",
+
+                      fontWeight:
+                        800,
+
+                      letterSpacing:
+                        "0.5px",
+                    }}
+                  >
+                    ASISTENCIA
+                  </span>
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+
+                      marginTop:
+                        "6px",
+
+                      fontSize:
+                        "12px",
+                    }}
+                  >
+                    👥{" "}
+                    {asistentes.length}
+                    {evento.cupo
+                      ? ` de ${evento.cupo}`
+                      : ""}
+                  </strong>
+                </div>
+              </div>
+
+              {evento.cupo && (
+                <div
+                  style={{
+                    marginTop:
+                      "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display:
+                        "flex",
+
+                      alignItems:
+                        "center",
+
+                      justifyContent:
+                        "space-between",
+
+                      gap:
+                        "10px",
+
+                      marginBottom:
+                        "6px",
+
+                      color:
+                        "#70746a",
+
+                      fontSize:
+                        "11px",
+                    }}
+                  >
+                    <span>
+                      Cupo del evento
+                    </span>
+
+                    <strong>
+                      {lleno
+                        ? "Cupo lleno"
+                        : `${lugaresDisponibles} ${
+                            lugaresDisponibles ===
+                            1
+                              ? "lugar disponible"
+                              : "lugares disponibles"
+                          }`}
+                    </strong>
+                  </div>
+
+                  <div
+                    style={{
+                      height:
+                        "8px",
+
+                      overflow:
+                        "hidden",
+
+                      borderRadius:
+                        "999px",
+
+                      background:
+                        "#eee8de",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width:
+                          `${porcentajeCupo}%`,
+
+                        height:
+                          "100%",
+
+                        borderRadius:
+                          "999px",
+
+                        background:
+                          lleno
+                            ? "#a75b51"
+                            : "#657a5b",
+
+                        transition:
+                          "width 0.25s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div
+                style={{
+                  marginTop:
+                    "20px",
+
+                  paddingTop:
+                    "18px",
+
+                  borderTop:
+                    "1px solid #eee7dc",
+                }}
+              >
+                <p className="tiny">
+                  ORGANIZA
+                </p>
+
+                {creador ? (
+                  <div
+                    style={{
+                      display:
+                        "flex",
+
+                      alignItems:
+                        "center",
+
+                      gap:
+                        "10px",
+
+                      marginTop:
+                        "10px",
+                    }}
+                  >
+                    {creador.username ? (
+                      <Link
+                        href={`/u/${creador.username}`}
+                        className="avatar"
+                        style={{
+                          width:
+                            "44px",
+
+                          height:
+                            "44px",
+                        }}
+                      >
+                        {creador.avatar_url ? (
+                          <img
+                            src={
+                              creador.avatar_url
+                            }
+                            alt={
+                              creador.nombre ||
+                              "Organizador"
+                            }
+                          />
+                        ) : (
+                          <span>
+                            🦦
+                          </span>
+                        )}
+                      </Link>
+                    ) : (
+                      <div
+                        className="avatar"
+                        style={{
+                          width:
+                            "44px",
+
+                          height:
+                            "44px",
+                        }}
+                      >
+                        {creador.avatar_url ? (
+                          <img
+                            src={
+                              creador.avatar_url
+                            }
+                            alt={
+                              creador.nombre ||
+                              "Organizador"
+                            }
+                          />
+                        ) : (
+                          <span>
+                            🦦
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div>
+                      {creador.username ? (
+                        <Link
+                          href={`/u/${creador.username}`}
+                          style={{
+                            color:
+                              "#30352d",
+
+                            fontSize:
+                              "12px",
+
+                            fontWeight:
+                              800,
+
+                            textDecoration:
+                              "none",
+                          }}
+                        >
+                          {creador.nombre ||
+                            "Estudiante"}
+                        </Link>
+                      ) : (
+                        <strong
+                          style={{
+                            fontSize:
+                              "12px",
+                          }}
+                        >
+                          {creador.nombre ||
+                            "Estudiante"}
+                        </strong>
+                      )}
+
+                      {creador.username && (
+                        <p
+                          style={{
+                            margin:
+                              "2px 0 0",
+
+                            color:
+                              "#969188",
+
+                            fontSize:
+                              "10px",
+                          }}
+                        >
+                          @{creador.username}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p
+                    style={{
+                      color:
+                        "#70746a",
+
+                      fontSize:
+                        "12px",
+                    }}
+                  >
+                    No pudimos mostrar
+                    el perfil del
+                    organizador.
+                  </p>
+                )}
+              </div>
+            </article>
+
+            <aside
+              className="card"
               style={{
-                border: 0,
+                alignSelf:
+                  "start",
+
+                padding:
+                  "22px",
               }}
-              disabled={
-                procesando ||
-                lleno
-              }
-              onClick={
-                confirmarAsistencia
-              }
             >
-              {lleno
-                ? "Cupo lleno"
-                : "✅ Confirmar asistencia"}
-            </button>
-          )}
+              <p className="tiny">
+                TU ASISTENCIA
+              </p>
 
-        {!esCreador &&
-          asisto && (
-            <button
-              type="button"
-              className="logoutButton"
-              disabled={
-                procesando
-              }
-              onClick={
-                cancelarAsistencia
-              }
-            >
-              ❌ Cancelar asistencia
-            </button>
-          )}
+              <h3
+                style={{
+                  margin:
+                    "6px 0 7px",
+                }}
+              >
+                {esCreador
+                  ? "Administrar evento"
+                  : asisto
+                  ? "Ya estás en la lista"
+                  : lleno
+                  ? "El evento está lleno"
+                  : "¿Quieres asistir?"}
+              </h3>
 
-        {esCreador && (
-          <button
-            type="button"
-            className="logoutButton"
-            disabled={
-              procesando
-            }
-            onClick={
-              eliminarEvento
-            }
+              <p
+                style={{
+                  margin:
+                    "0",
+
+                  color:
+                    "#70746a",
+
+                  fontSize:
+                    "12px",
+
+                  lineHeight:
+                    1.55,
+                }}
+              >
+                {esCreador
+                  ? "Eres la persona que creó este evento."
+                  : asisto
+                  ? "Tu lugar está confirmado. Si tus planes cambian, puedes cancelar tu asistencia."
+                  : lleno
+                  ? "Por ahora no quedan lugares disponibles."
+                  : evento.cupo
+                  ? `${lugaresDisponibles} ${
+                      lugaresDisponibles ===
+                      1
+                        ? "lugar disponible"
+                        : "lugares disponibles"
+                    }.`
+                  : "Este evento no tiene un límite de asistentes."}
+              </p>
+
+              {!esCreador &&
+                !asisto && (
+                  <button
+                    type="button"
+                    className="editProfileButton"
+                    style={{
+                      width:
+                        "100%",
+
+                      justifyContent:
+                        "center",
+
+                      marginTop:
+                        "18px",
+
+                      border:
+                        0,
+                    }}
+                    disabled={
+                      procesando ||
+                      lleno
+                    }
+                    onClick={
+                      confirmarAsistencia
+                    }
+                  >
+                    {procesando
+                      ? "Confirmando..."
+                      : lleno
+                      ? "Cupo lleno"
+                      : "✅ Confirmar asistencia"}
+                  </button>
+                )}
+
+              {!esCreador &&
+                asisto && (
+                  <button
+                    type="button"
+                    className="logoutButton"
+                    style={{
+                      width:
+                        "100%",
+
+                      justifyContent:
+                        "center",
+
+                      marginTop:
+                        "18px",
+                    }}
+                    disabled={
+                      procesando
+                    }
+                    onClick={
+                      cancelarAsistencia
+                    }
+                  >
+                    {procesando
+                      ? "Procesando..."
+                      : "❌ Cancelar asistencia"}
+                  </button>
+                )}
+
+              {esCreador && (
+                <>
+                  <div
+                    style={{
+                      marginTop:
+                        "17px",
+
+                      padding:
+                        "11px 12px",
+
+                      borderRadius:
+                        "12px",
+
+                      background:
+                        "#f7f4ee",
+
+                      color:
+                        "#70746a",
+
+                      fontSize:
+                        "11px",
+
+                      lineHeight:
+                        1.5,
+                    }}
+                  >
+                    👥{" "}
+                    <strong>
+                      {asistentes.length}
+                    </strong>{" "}
+                    personas han
+                    confirmado hasta
+                    ahora.
+                  </div>
+
+                  <button
+                    type="button"
+                    className="logoutButton"
+                    style={{
+                      width:
+                        "100%",
+
+                      justifyContent:
+                        "center",
+
+                      marginTop:
+                        "12px",
+                    }}
+                    disabled={
+                      procesando
+                    }
+                    onClick={
+                      eliminarEvento
+                    }
+                  >
+                    {procesando
+                      ? "Eliminando..."
+                      : "🗑️ Eliminar evento"}
+                  </button>
+                </>
+              )}
+            </aside>
+          </section>
+
+          <section
+            style={{
+              marginTop:
+                "30px",
+
+              paddingBottom:
+                "60px",
+            }}
           >
-            🗑 Eliminar evento
-          </button>
-        )}
+            <div className="sectionHeader">
+              <p className="tiny">
+                ASISTENTES
+              </p>
+
+              <h2>
+                ¿Quién va?
+              </h2>
+            </div>
+
+            <div
+              style={{
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "space-between",
+
+                gap:
+                  "10px",
+
+                flexWrap:
+                  "wrap",
+
+                marginBottom:
+                  "14px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+
+                  color:
+                    "#70746a",
+
+                  fontSize:
+                    "12px",
+                }}
+              >
+                <strong>
+                  {perfilesAsistentes.length}
+                </strong>{" "}
+                {perfilesAsistentes.length ===
+                1
+                  ? "persona confirmada"
+                  : "personas confirmadas"}
+              </p>
+
+              <span
+                className="tag"
+                style={{
+                  marginTop:
+                    0,
+                }}
+              >
+                📅{" "}
+                {fechaCorta(
+                  evento.fecha_inicio
+                )}
+              </span>
+            </div>
+
+            {perfilesAsistentes.length ===
+            0 ? (
+              <div className="emptyState">
+                <span className="emptyStateIcon">
+                  👥
+                </span>
+
+                <strong>
+                  Todavía nadie ha confirmado
+                </strong>
+
+                <p
+                  style={{
+                    marginBottom:
+                      0,
+                  }}
+                >
+                  Cuando los estudiantes
+                  confirmen su asistencia,
+                  aparecerán aquí.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display:
+                    "grid",
+
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(220px, 1fr))",
+
+                  gap:
+                    "10px",
+                }}
+              >
+                {perfilesAsistentes.map(
+                  (persona) => {
+                    const contenidoPersona = (
+                      <article
+                        className="card"
+                        style={{
+                          display:
+                            "flex",
+
+                          alignItems:
+                            "center",
+
+                          gap:
+                            "10px",
+
+                          height:
+                            "100%",
+
+                          padding:
+                            "14px",
+                        }}
+                      >
+                        <div
+                          className="avatar"
+                          style={{
+                            width:
+                              "42px",
+
+                            height:
+                              "42px",
+                          }}
+                        >
+                          {persona.avatar_url ? (
+                            <img
+                              src={
+                                persona.avatar_url
+                              }
+                              alt={
+                                persona.nombre ||
+                                "Usuario"
+                              }
+                            />
+                          ) : (
+                            <span>
+                              🦦
+                            </span>
+                          )}
+                        </div>
+
+                        <div
+                          style={{
+                            minWidth:
+                              0,
+                          }}
+                        >
+                          <strong
+                            style={{
+                              display:
+                                "block",
+
+                              fontSize:
+                                "12px",
+
+                              overflowWrap:
+                                "anywhere",
+                            }}
+                          >
+                            {persona.nombre ||
+                              "Estudiante"}
+                          </strong>
+
+                          {persona.username && (
+                            <p
+                              style={{
+                                margin:
+                                  "3px 0 0",
+
+                                color:
+                                  "#969188",
+
+                                fontSize:
+                                  "10px",
+
+                                overflowWrap:
+                                  "anywhere",
+                              }}
+                            >
+                              @{persona.username}
+                            </p>
+                          )}
+                        </div>
+                      </article>
+                    );
+
+                    return persona.username ? (
+                      <Link
+                        key={
+                          persona.id
+                        }
+                        href={`/u/${persona.username}`}
+                        style={{
+                          color:
+                            "inherit",
+
+                          textDecoration:
+                            "none",
+                        }}
+                      >
+                        {contenidoPersona}
+                      </Link>
+                    ) : (
+                      <div
+                        key={
+                          persona.id
+                        }
+                      >
+                        {contenidoPersona}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
+          </section>
+        </main>
+      </div>
+
+      <nav className="mobileNav">
+        <Link href="/">
+          <span>
+            🏠
+          </span>
+
+          <span>
+            Inicio
+          </span>
+        </Link>
+
+        <Link href="/buscar">
+          <span>
+            🔎
+          </span>
+
+          <span>
+            Buscar
+          </span>
+        </Link>
+
+        <Link href="/publicar">
+          <span>
+            ➕
+          </span>
+
+          <span>
+            Publicar
+          </span>
+        </Link>
 
         <Link
           href="/eventos"
-          className="backHomeButton"
+          className="active"
         >
-          ← Volver a eventos
+          <span>
+            🎉
+          </span>
+
+          <span>
+            Eventos
+          </span>
         </Link>
-      </section>
 
-      <section
-        style={{
-          maxWidth: "780px",
-          marginTop: "28px",
-        }}
-      >
-        <p className="tiny">
-          ASISTENTES
-        </p>
+        <Link href="/perfil">
+          <span>
+            👤
+          </span>
 
-        <h2>
-          ¿Quién va?
-        </h2>
+          <span>
+            Perfil
+          </span>
+        </Link>
+      </nav>
 
-        {perfilesAsistentes.length ===
-        0 ? (
-          <div className="emptyState">
-            <span className="emptyStateIcon">
-              👥
-            </span>
-
-            Todavía nadie ha confirmado.
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gap: "10px",
-            }}
-          >
-            {perfilesAsistentes.map(
-              (persona) => (
-                <Link
-                  key={
-                    persona.id
-                  }
-                  href={`/u/${persona.username}`}
-                  className="card"
-                  style={{
-                    display:
-                      "flex",
-                    alignItems:
-                      "center",
-                    gap: "10px",
-                    textDecoration:
-                      "none",
-                  }}
-                >
-                  <div className="avatar">
-                    {persona.avatar_url ? (
-                      <img
-                        src={
-                          persona.avatar_url
-                        }
-                        alt={
-                          persona.nombre ||
-                          "Usuario"
-                        }
-                      />
-                    ) : (
-                      <span>
-                        🦦
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <strong>
-                      {persona.nombre ||
-                        "Estudiante"}
-                    </strong>
-
-                    <p
-                      style={{
-                        margin:
-                          "3px 0 0",
-                        color:
-                          "#969188",
-                        fontSize:
-                          "12px",
-                      }}
-                    >
-                      @
-                      {persona.username ||
-                        "usuario"}
-                    </p>
-                  </div>
-                </Link>
-              )
-            )}
-          </div>
-        )}
-      </section>
-    </main>
+      <style jsx>{`
+        @media (max-width: 850px) {
+          .eventDetailGrid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }

@@ -99,14 +99,15 @@ export default function CommentSection({
         return;
       }
 
-      const idsUsuarios = [
-        ...new Set(
-          comentariosBase.map(
-            (comentario) =>
-              comentario.user_id
+      const idsUsuarios =
+        Array.from(
+          new Set(
+            comentariosBase.map(
+              (comentario) =>
+                comentario.user_id
+            )
           )
-        ),
-      ];
+        );
 
       const {
         data: autoresData,

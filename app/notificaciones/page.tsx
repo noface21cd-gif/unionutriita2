@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import Link from "next/link";
 
 import { createClient } from "../../lib/supabase/client";
@@ -36,13 +41,21 @@ type Conexion = {
   id: string;
   requester_id: string;
   receiver_id: string;
-  status: "pending" | "accepted";
+  status:
+    | "pending"
+    | "accepted";
   created_at: string;
 };
 
+type TipoNotificacion =
+  | "like"
+  | "comentario"
+  | "solicitud"
+  | "conexion";
+
 type Notificacion = {
   id: string;
-  tipo: "like" | "comentario" | "solicitud" | "conexion";
+  tipo: TipoNotificacion;
   actor: PerfilMini | null;
   fecha: string;
   texto: string;
@@ -50,15 +63,31 @@ type Notificacion = {
   destino: string;
 };
 
+type Filtro =
+  | "todas"
+  | TipoNotificacion;
+
 export default function NotificacionesPage() {
-  const [notificaciones, setNotificaciones] =
-    useState<Notificacion[]>([]);
+  const [
+    notificaciones,
+    setNotificaciones,
+  ] = useState<Notificacion[]>([]);
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [
+    filtro,
+    setFiltro,
+  ] =
+    useState<Filtro>("todas");
 
-  const [mensaje, setMensaje] =
-    useState("");
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
+
+  const [
+    mensaje,
+    setMensaje,
+  ] = useState("");
 
   useEffect(() => {
     let activo = true;
@@ -68,7 +97,10 @@ export default function NotificacionesPage() {
         const user =
           await requerirUsuario();
 
-        if (!user || !activo) {
+        if (
+          !user ||
+          !activo
+        ) {
           return;
         }
 
@@ -76,15 +108,20 @@ export default function NotificacionesPage() {
           createClient();
 
         /*
-         * 1. Buscar nuestras publicaciones
+         * 1. Buscar nuestras publicaciones.
          */
         const {
           data: postsData,
           error: postsError,
         } = await supabase
           .from("posts")
-          .select("id, contenido")
-          .eq("user_id", user.id);
+          .select(
+            "id, contenido"
+          )
+          .eq(
+            "user_id",
+            user.id
+          );
 
         if (postsError) {
           throw new Error(
@@ -93,11 +130,13 @@ export default function NotificacionesPage() {
         }
 
         const misPosts =
-          (postsData || []) as PostMini[];
+          (postsData ||
+            []) as PostMini[];
 
         const idsPosts =
           misPosts.map(
-            (post) => post.id
+            (post) =>
+              post.id
           );
 
         /*
@@ -106,7 +145,8 @@ export default function NotificacionesPage() {
          */
         const {
           data: conexionesData,
-          error: conexionesError,
+          error:
+            conexionesError,
         } = await supabase
           .from("connections")
           .select(`
@@ -119,31 +159,43 @@ export default function NotificacionesPage() {
           .or(
             `requester_id.eq.${user.id},receiver_id.eq.${user.id}`
           )
-          .order("created_at", {
-            ascending: false,
-          })
+          .order(
+            "created_at",
+            {
+              ascending: false,
+            }
+          )
           .limit(50);
 
-        if (conexionesError) {
+        if (
+          conexionesError
+        ) {
           throw new Error(
             conexionesError.message
           );
         }
 
         let likes: Like[] = [];
-        let comentarios: Comentario[] = [];
+
+        let comentarios:
+          Comentario[] = [];
 
         /*
          * 3. Likes y comentarios
          * recibidos en nuestros posts.
          */
-        if (idsPosts.length > 0) {
+        if (
+          idsPosts.length >
+          0
+        ) {
           const [
             likesResultado,
             comentariosResultado,
           ] = await Promise.all([
             supabase
-              .from("post_likes")
+              .from(
+                "post_likes"
+              )
               .select(`
                 post_id,
                 user_id,
@@ -160,13 +212,16 @@ export default function NotificacionesPage() {
               .order(
                 "created_at",
                 {
-                  ascending: false,
+                  ascending:
+                    false,
                 }
               )
               .limit(50),
 
             supabase
-              .from("comments")
+              .from(
+                "comments"
+              )
               .select(`
                 id,
                 post_id,
@@ -185,7 +240,8 @@ export default function NotificacionesPage() {
               .order(
                 "created_at",
                 {
-                  ascending: false,
+                  ascending:
+                    false,
                 }
               )
               .limit(50),
@@ -195,7 +251,8 @@ export default function NotificacionesPage() {
             likesResultado.error
           ) {
             throw new Error(
-              likesResultado.error.message
+              likesResultado
+                .error.message
             );
           }
 
@@ -203,7 +260,8 @@ export default function NotificacionesPage() {
             comentariosResultado.error
           ) {
             throw new Error(
-              comentariosResultado.error.message
+              comentariosResultado
+                .error.message
             );
           }
 
@@ -221,17 +279,19 @@ export default function NotificacionesPage() {
             []) as Conexion[];
 
         /*
-         * 4. Averiguar qué usuarios
-         * participan en las notificaciones.
+         * 4. Buscar perfiles de quienes
+         * aparecen en la actividad.
          */
         const idsActores =
           new Set<string>();
 
-        likes.forEach((like) => {
-          idsActores.add(
-            like.user_id
-          );
-        });
+        likes.forEach(
+          (like) => {
+            idsActores.add(
+              like.user_id
+            );
+          }
+        );
 
         comentarios.forEach(
           (comentario) => {
@@ -255,13 +315,18 @@ export default function NotificacionesPage() {
           }
         );
 
-        let perfiles: PerfilMini[] =
-          [];
+        let perfiles:
+          PerfilMini[] = [];
 
-        if (idsActores.size > 0) {
+        if (
+          idsActores.size >
+          0
+        ) {
           const {
-            data: perfilesData,
-            error: perfilesError,
+            data:
+              perfilesData,
+            error:
+              perfilesError,
           } = await supabase
             .from("profiles")
             .select(`
@@ -277,7 +342,9 @@ export default function NotificacionesPage() {
               )
             );
 
-          if (perfilesError) {
+          if (
+            perfilesError
+          ) {
             throw new Error(
               perfilesError.message
             );
@@ -319,35 +386,44 @@ export default function NotificacionesPage() {
         );
 
         /*
-         * 5. Construir notificaciones
+         * 5. Construir la actividad.
          */
         const resultado:
           Notificacion[] = [];
 
-        likes.forEach((like) => {
-          const actor =
-            mapaPerfiles.get(
-              like.user_id
-            ) || null;
+        likes.forEach(
+          (like) => {
+            const actor =
+              mapaPerfiles.get(
+                like.user_id
+              ) || null;
 
-          const post =
-            mapaPosts.get(
-              like.post_id
-            );
+            const post =
+              mapaPosts.get(
+                like.post_id
+              );
 
-          resultado.push({
-            id: `like-${like.user_id}-${like.post_id}`,
-            tipo: "like",
-            actor,
-            fecha:
-              like.created_at,
-            texto:
-              "le gustó tu publicación.",
-            detalle:
-              post?.contenido,
-            destino: "/",
-          });
-        });
+            resultado.push({
+              id:
+                `like-${like.user_id}-${like.post_id}`,
+
+              tipo: "like",
+
+              actor,
+
+              fecha:
+                like.created_at,
+
+              texto:
+                "le gustó tu publicación.",
+
+              detalle:
+                post?.contenido,
+
+              destino: "/",
+            });
+          }
+        );
 
         comentarios.forEach(
           (comentario) => {
@@ -357,16 +433,23 @@ export default function NotificacionesPage() {
               ) || null;
 
             resultado.push({
-              id: `comment-${comentario.id}`,
+              id:
+                `comment-${comentario.id}`,
+
               tipo:
                 "comentario",
+
               actor,
+
               fecha:
                 comentario.created_at,
+
               texto:
                 "comentó en tu publicación.",
+
               detalle:
                 comentario.contenido,
+
               destino: "/",
             });
           }
@@ -395,35 +478,47 @@ export default function NotificacionesPage() {
                 user.id
             ) {
               resultado.push({
-                id: `request-${conexion.id}`,
+                id:
+                  `request-${conexion.id}`,
+
                 tipo:
                   "solicitud",
+
                 actor,
+
                 fecha:
                   conexion.created_at,
+
                 texto:
                   "quiere conectar contigo.",
+
                 destino:
                   "/conexiones",
               });
             }
 
             /*
-             * Conexiones ya aceptadas.
+             * Conexión aceptada.
              */
             if (
               conexion.status ===
               "accepted"
             ) {
               resultado.push({
-                id: `connection-${conexion.id}`,
+                id:
+                  `connection-${conexion.id}`,
+
                 tipo:
                   "conexion",
+
                 actor,
+
                 fecha:
                   conexion.created_at,
+
                 texto:
                   "ahora forma parte de tus conexiones.",
+
                 destino:
                   actor?.username
                     ? `/u/${actor.username}`
@@ -433,9 +528,6 @@ export default function NotificacionesPage() {
           }
         );
 
-        /*
-         * Más recientes primero.
-         */
         resultado.sort(
           (a, b) =>
             new Date(
@@ -463,7 +555,9 @@ export default function NotificacionesPage() {
         );
       } finally {
         if (activo) {
-          setCargando(false);
+          setCargando(
+            false
+          );
         }
       }
     }
@@ -476,7 +570,7 @@ export default function NotificacionesPage() {
   }, []);
 
   function icono(
-    tipo: Notificacion["tipo"]
+    tipo: TipoNotificacion
   ) {
     switch (tipo) {
       case "like":
@@ -496,18 +590,110 @@ export default function NotificacionesPage() {
     }
   }
 
+  function nombreTipo(
+    tipo: TipoNotificacion
+  ) {
+    switch (tipo) {
+      case "like":
+        return "Me gusta";
+
+      case "comentario":
+        return "Comentario";
+
+      case "solicitud":
+        return "Solicitud";
+
+      case "conexion":
+        return "Conexión";
+
+      default:
+        return "Actividad";
+    }
+  }
+
+  function fondoTipo(
+    tipo: TipoNotificacion
+  ) {
+    switch (tipo) {
+      case "like":
+        return "#f8e6e2";
+
+      case "comentario":
+        return "#e8edf4";
+
+      case "solicitud":
+        return "#f8e7c7";
+
+      case "conexion":
+        return "#e5eedc";
+
+      default:
+        return "#f3f0e8";
+    }
+  }
+
   function fechaBonita(
     fecha: string
   ) {
     return new Date(
       fecha
-    ).toLocaleString("es-MX", {
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    ).toLocaleString(
+      "es-MX",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }
+    );
   }
+
+  const notificacionesFiltradas =
+    useMemo(() => {
+      if (
+        filtro === "todas"
+      ) {
+        return notificaciones;
+      }
+
+      return notificaciones.filter(
+        (notificacion) =>
+          notificacion.tipo ===
+          filtro
+      );
+    }, [
+      filtro,
+      notificaciones,
+    ]);
+
+  const totalLikes =
+    notificaciones.filter(
+      (notificacion) =>
+        notificacion.tipo ===
+        "like"
+    ).length;
+
+  const totalComentarios =
+    notificaciones.filter(
+      (notificacion) =>
+        notificacion.tipo ===
+        "comentario"
+    ).length;
+
+  const totalSolicitudes =
+    notificaciones.filter(
+      (notificacion) =>
+        notificacion.tipo ===
+        "solicitud"
+    ).length;
+
+  const totalConexiones =
+    notificaciones.filter(
+      (notificacion) =>
+        notificacion.tipo ===
+        "conexion"
+    ).length;
 
   if (cargando) {
     return (
@@ -518,8 +704,7 @@ export default function NotificacionesPage() {
           </span>
 
           <p className="loadingText">
-            Revisando qué pasó mientras
-            nadabas por otros lados...
+            Revisando la actividad...
           </p>
         </div>
       </main>
@@ -527,214 +712,983 @@ export default function NotificacionesPage() {
   }
 
   return (
-    <main className="content">
-      <section className="welcome">
-        <div>
-          <p className="tiny">
-            ACTIVIDAD
-          </p>
-
-          <h2>
-            Notificaciones 🔔
-          </h2>
-
-          <p>
-            Likes, comentarios,
-            solicitudes y conexiones
-            recientes.
-          </p>
-        </div>
-
-        <div className="welcomeOtter">
-          🦦
-        </div>
-      </section>
-
-      <div
-        style={{
-          marginTop: "18px",
-        }}
-      >
+    <div className="app">
+      <header className="topbar">
         <Link
           href="/"
-          className="primaryButton"
+          className="brand"
         >
-          ← Volver al inicio
+          <span className="logo">
+            🦦
+          </span>
+
+          <div>
+            <h1>
+              Uniónutriita
+            </h1>
+
+            <p>
+              Comunidad ENES Oaxaca
+            </p>
+          </div>
         </Link>
-      </div>
 
-      {mensaje && (
-        <div
-          className="errorBox"
-          style={{
-            marginTop: "20px",
-          }}
-        >
-          {mensaje}
-        </div>
-      )}
+        <div className="topActions">
+          <Link
+            href="/buscar"
+            className="circleButton"
+            aria-label="Buscar"
+            title="Buscar"
+          >
+            🔎
+          </Link>
 
-      {!mensaje &&
-        notificaciones.length ===
-          0 && (
-          <div
-            className="emptyState"
+          <Link
+            href="/notificaciones"
+            className="circleButton"
+            aria-label="Notificaciones"
+            title="Notificaciones"
             style={{
-              marginTop:
-                "22px",
+              background:
+                "#e5eedc",
             }}
           >
-            <span className="emptyStateIcon">
+            🔔
+          </Link>
+
+          <Link
+            href="/perfil"
+            className="profileButton profileLink"
+            aria-label="Mi perfil"
+            title="Mi perfil"
+          >
+            👤
+          </Link>
+        </div>
+      </header>
+
+      <div className="layout">
+        <aside className="sidebar">
+          <p className="sidebarTitle">
+            Explorar
+          </p>
+
+          <Link
+            href="/"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🏠
+            </span>
+
+            Inicio
+          </Link>
+
+          <Link
+            href="/estudio"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              📚
+            </span>
+
+            Estudio
+          </Link>
+
+          <Link
+            href="/comunidades"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🫂
+            </span>
+
+            Comunidades
+          </Link>
+
+          <Link
+            href="/eventos"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🎉
+            </span>
+
+            Eventos
+          </Link>
+
+          <Link
+            href="/conexiones"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🤝
+            </span>
+
+            Conexiones
+          </Link>
+
+          <Link
+            href="/guardados"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔖
+            </span>
+
+            Guardados
+          </Link>
+
+          <Link
+            href="/social"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🌿
+            </span>
+
+            Social
+          </Link>
+
+          <p
+            className="sidebarTitle"
+            style={{
+              marginTop:
+                "24px",
+            }}
+          >
+            Tu cuenta
+          </p>
+
+          <Link
+            href="/notificaciones"
+            className="menuButton selected"
+          >
+            <span className="menuIcon">
               🔔
             </span>
 
-            No tienes notificaciones
-            todavía.
+            Notificaciones
+          </Link>
+
+          <Link
+            href="/perfil"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              👤
+            </span>
+
+            Mi perfil
+          </Link>
+
+          <div className="otterCard">
+            <span className="bigOtter">
+              🔔
+            </span>
+
+            <div>
+              <strong>
+                Actividad
+              </strong>
+
+              <p>
+                Lo que está pasando
+              </p>
+            </div>
           </div>
-        )}
+        </aside>
 
-      <section
-        style={{
-          display: "grid",
-          gap: "12px",
-          maxWidth: "780px",
-          marginTop: "22px",
-        }}
-      >
-        {notificaciones.map(
-          (notificacion) => {
-            const nombre =
-              notificacion.actor
-                ?.nombre ||
-              "Un estudiante";
+        <main className="content">
+          <section className="welcome">
+            <div>
+              <p className="tiny">
+                ACTIVIDAD
+              </p>
 
-            const username =
-              notificacion.actor
-                ?.username;
+              <h2>
+                Notificaciones 🔔
+              </h2>
 
-            return (
-              <Link
-                key={
-                  notificacion.id
-                }
-                href={
-                  notificacion.destino
-                }
-                className="card"
+              <p>
+                Revisa quién interactuó
+                con tus publicaciones,
+                quién quiere conectar
+                contigo y los movimientos
+                recientes de tu red.
+              </p>
+            </div>
+
+            <div className="welcomeOtter">
+              🔔
+            </div>
+          </section>
+
+          <section
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(145px, 1fr))",
+
+              gap:
+                "10px",
+
+              marginTop:
+                "20px",
+            }}
+          >
+            <article className="card">
+              <p className="tiny">
+                ACTIVIDAD
+              </p>
+
+              <strong
                 style={{
-                  display: "flex",
-                  alignItems:
-                    "flex-start",
-                  gap: "12px",
-                  textDecoration:
-                    "none",
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
                 }}
               >
-                <div
-                  className="avatar"
-                  style={{
-                    width: "46px",
-                    height: "46px",
-                  }}
-                >
-                  {notificacion.actor
-                    ?.avatar_url ? (
-                    <img
-                      src={
-                        notificacion
-                          .actor
-                          .avatar_url
-                      }
-                      alt={nombre}
-                    />
-                  ) : (
-                    <span>
-                      {icono(
-                        notificacion.tipo
-                      )}
-                    </span>
-                  )}
-                </div>
+                {
+                  notificaciones.length
+                }
+              </strong>
 
-                <div
+              <p>
+                notificaciones totales
+              </p>
+            </article>
+
+            <article className="card">
+              <p className="tiny">
+                ME GUSTA
+              </p>
+
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
+                }}
+              >
+                {totalLikes}
+              </strong>
+
+              <p>
+                reacciones recibidas
+              </p>
+            </article>
+
+            <article className="card">
+              <p className="tiny">
+                COMENTARIOS
+              </p>
+
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
+                }}
+              >
+                {totalComentarios}
+              </strong>
+
+              <p>
+                respuestas recibidas
+              </p>
+            </article>
+
+            <article className="card">
+              <p className="tiny">
+                RED
+              </p>
+
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
+                }}
+              >
+                {totalSolicitudes +
+                  totalConexiones}
+              </strong>
+
+              <p>
+                movimientos de conexión
+              </p>
+            </article>
+          </section>
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              gap:
+                "8px",
+
+              flexWrap:
+                "wrap",
+
+              marginTop:
+                "20px",
+            }}
+          >
+            <Link
+              href="/"
+              className="backHomeButton"
+            >
+              ← Inicio
+            </Link>
+
+            <Link
+              href="/conexiones"
+              className="backHomeButton"
+            >
+              🤝 Conexiones
+            </Link>
+          </div>
+
+          {mensaje && (
+            <div
+              className="errorBox"
+              style={{
+                marginTop:
+                  "18px",
+              }}
+            >
+              {mensaje}
+            </div>
+          )}
+
+          <section
+            style={{
+              marginTop:
+                "30px",
+
+              paddingBottom:
+                "60px",
+            }}
+          >
+            <div className="sectionHeader">
+              <p className="tiny">
+                BANDEJA DE ACTIVIDAD
+              </p>
+
+              <h2>
+                Lo más reciente
+              </h2>
+            </div>
+
+            <div
+              className="card"
+              style={{
+                padding:
+                  "10px 14px",
+
+                marginBottom:
+                  "16px",
+              }}
+            >
+              <div
+                className="feedTabs"
+                style={{
+                  margin:
+                    "0",
+                }}
+              >
+                <button
+                  type="button"
+                  className={`feedTab ${
+                    filtro ===
+                    "todas"
+                      ? "activeTab"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setFiltro(
+                      "todas"
+                    )
+                  }
+                >
+                  🔔 Todas
+                </button>
+
+                <button
+                  type="button"
+                  className={`feedTab ${
+                    filtro ===
+                    "like"
+                      ? "activeTab"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setFiltro(
+                      "like"
+                    )
+                  }
+                >
+                  ♥️ Me gusta
+                </button>
+
+                <button
+                  type="button"
+                  className={`feedTab ${
+                    filtro ===
+                    "comentario"
+                      ? "activeTab"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setFiltro(
+                      "comentario"
+                    )
+                  }
+                >
+                  💬 Comentarios
+                </button>
+
+                <button
+                  type="button"
+                  className={`feedTab ${
+                    filtro ===
+                    "solicitud"
+                      ? "activeTab"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setFiltro(
+                      "solicitud"
+                    )
+                  }
+                >
+                  📩 Solicitudes
+                </button>
+
+                <button
+                  type="button"
+                  className={`feedTab ${
+                    filtro ===
+                    "conexion"
+                      ? "activeTab"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setFiltro(
+                      "conexion"
+                    )
+                  }
+                >
+                  🤝 Conexiones
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "space-between",
+
+                gap:
+                  "10px",
+
+                flexWrap:
+                  "wrap",
+
+                marginBottom:
+                  "14px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+
+                  color:
+                    "#70746a",
+
+                  fontSize:
+                    "12px",
+                }}
+              >
+                Mostrando{" "}
+                <strong>
+                  {
+                    notificacionesFiltradas.length
+                  }
+                </strong>{" "}
+                de{" "}
+                <strong>
+                  {
+                    notificaciones.length
+                  }
+                </strong>{" "}
+                notificaciones
+              </p>
+
+              {filtro !==
+                "todas" && (
+                <span
+                  className="tag"
                   style={{
-                    flex: 1,
-                    minWidth: 0,
+                    marginTop:
+                      0,
                   }}
                 >
+                  {filtro ===
+                  "like"
+                    ? "♥️ Me gusta"
+                    : filtro ===
+                      "comentario"
+                    ? "💬 Comentarios"
+                    : filtro ===
+                      "solicitud"
+                    ? "📩 Solicitudes"
+                    : "🤝 Conexiones"}
+                </span>
+              )}
+            </div>
+
+            {!mensaje &&
+              notificacionesFiltradas.length ===
+                0 && (
+                <div className="emptyState">
+                  <span className="emptyStateIcon">
+                    🔔
+                  </span>
+
+                  <strong>
+                    No hay actividad aquí
+                  </strong>
+
                   <p
                     style={{
-                      margin: 0,
-                      lineHeight:
-                        1.45,
+                      marginBottom:
+                        0,
                     }}
                   >
-                    <strong>
-                      {nombre}
-                    </strong>{" "}
-
-                    {username &&
-                      `@${username} `}
-
-                    {
-                      notificacion.texto
-                    }
+                    Cuando alguien
+                    interactúe contigo,
+                    aparecerá en esta
+                    bandeja.
                   </p>
+                </div>
+              )}
 
-                  {notificacion.detalle && (
-                    <p
+            <div
+              style={{
+                display:
+                  "grid",
+
+                gap:
+                  "10px",
+
+                maxWidth:
+                  "900px",
+              }}
+            >
+              {notificacionesFiltradas.map(
+                (
+                  notificacion
+                ) => {
+                  const nombre =
+                    notificacion.actor
+                      ?.nombre ||
+                    "Un estudiante";
+
+                  const username =
+                    notificacion.actor
+                      ?.username;
+
+                  return (
+                    <Link
+                      key={
+                        notificacion.id
+                      }
+                      href={
+                        notificacion.destino
+                      }
+                      className="card"
                       style={{
-                        margin:
-                          "6px 0 0",
-                        color:
-                          "#70746a",
-                        fontSize:
+                        position:
+                          "relative",
+
+                        display:
+                          "grid",
+
+                        gridTemplateColumns:
+                          "52px minmax(0, 1fr) auto",
+
+                        alignItems:
+                          "center",
+
+                        gap:
                           "13px",
-                        overflow:
-                          "hidden",
-                        textOverflow:
-                          "ellipsis",
-                        whiteSpace:
-                          "nowrap",
+
+                        padding:
+                          "15px 16px",
+
+                        color:
+                          "inherit",
+
+                        textDecoration:
+                          "none",
                       }}
                     >
-                      “
-                      {
-                        notificacion.detalle
-                      }
-                      ”
-                    </p>
-                  )}
+                      <div
+                        style={{
+                          position:
+                            "relative",
 
-                  <span
-                    style={{
-                      display:
-                        "block",
-                      marginTop:
-                        "6px",
-                      color:
-                        "#969188",
-                      fontSize:
-                        "11px",
-                    }}
-                  >
-                    {fechaBonita(
-                      notificacion.fecha
-                    )}
-                  </span>
-                </div>
+                          width:
+                            "52px",
 
-                <span>
-                  {icono(
-                    notificacion.tipo
-                  )}
-                </span>
-              </Link>
-            );
-          }
-        )}
-      </section>
-    </main>
+                          height:
+                            "52px",
+                        }}
+                      >
+                        <div
+                          className="avatar"
+                          style={{
+                            width:
+                              "52px",
+
+                            height:
+                              "52px",
+
+                            fontSize:
+                              "20px",
+                          }}
+                        >
+                          {notificacion
+                            .actor
+                            ?.avatar_url ? (
+                            <img
+                              src={
+                                notificacion
+                                  .actor
+                                  .avatar_url
+                              }
+                              alt={
+                                nombre
+                              }
+                            />
+                          ) : (
+                            <span>
+                              🦦
+                            </span>
+                          )}
+                        </div>
+
+                        <span
+                          style={{
+                            width:
+                              "24px",
+
+                            height:
+                              "24px",
+
+                            position:
+                              "absolute",
+
+                            right:
+                              "-3px",
+
+                            bottom:
+                              "-3px",
+
+                            display:
+                              "grid",
+
+                            placeItems:
+                              "center",
+
+                            border:
+                              "2px solid #fffdf9",
+
+                            borderRadius:
+                              "50%",
+
+                            background:
+                              fondoTipo(
+                                notificacion.tipo
+                              ),
+
+                            fontSize:
+                              "11px",
+                          }}
+                        >
+                          {icono(
+                            notificacion.tipo
+                          )}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          minWidth:
+                            0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display:
+                              "flex",
+
+                            alignItems:
+                              "center",
+
+                            gap:
+                              "6px",
+
+                            flexWrap:
+                              "wrap",
+
+                            marginBottom:
+                              "3px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              color:
+                                "#30352d",
+
+                              fontSize:
+                                "13px",
+
+                              fontWeight:
+                                800,
+                            }}
+                          >
+                            {nombre}
+                          </span>
+
+                          {username && (
+                            <span
+                              style={{
+                                color:
+                                  "#969188",
+
+                                fontSize:
+                                  "11px",
+                              }}
+                            >
+                              @{username}
+                            </span>
+                          )}
+
+                          <span
+                            style={{
+                              padding:
+                                "3px 6px",
+
+                              borderRadius:
+                                "999px",
+
+                              background:
+                                fondoTipo(
+                                  notificacion.tipo
+                                ),
+
+                              color:
+                                "#686e63",
+
+                              fontSize:
+                                "9px",
+
+                              fontWeight:
+                                800,
+                            }}
+                          >
+                            {nombreTipo(
+                              notificacion.tipo
+                            )}
+                          </span>
+                        </div>
+
+                        <p
+                          style={{
+                            margin:
+                              "3px 0 0",
+
+                            color:
+                              "#4e534a",
+
+                            fontSize:
+                              "13px",
+
+                            lineHeight:
+                              1.5,
+                          }}
+                        >
+                          {
+                            notificacion.texto
+                          }
+                        </p>
+
+                        {notificacion.detalle && (
+                          <div
+                            style={{
+                              display:
+                                "-webkit-box",
+
+                              marginTop:
+                                "7px",
+
+                              overflow:
+                                "hidden",
+
+                              color:
+                                "#7a776f",
+
+                              fontSize:
+                                "12px",
+
+                              lineHeight:
+                                1.45,
+
+                              WebkitBoxOrient:
+                                "vertical",
+
+                              WebkitLineClamp:
+                                2,
+                            }}
+                          >
+                            “
+                            {
+                              notificacion.detalle
+                            }
+                            ”
+                          </div>
+                        )}
+
+                        <span
+                          style={{
+                            display:
+                              "block",
+
+                            marginTop:
+                              "7px",
+
+                            color:
+                              "#969188",
+
+                            fontSize:
+                              "10px",
+                          }}
+                        >
+                          {fechaBonita(
+                            notificacion.fecha
+                          )}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          alignSelf:
+                            "center",
+
+                          color:
+                            "#969188",
+
+                          fontSize:
+                            "17px",
+                        }}
+                      >
+                        ›
+                      </div>
+                    </Link>
+                  );
+                }
+              )}
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <nav className="mobileNav">
+        <Link href="/">
+          <span>
+            🏠
+          </span>
+
+          <span>
+            Inicio
+          </span>
+        </Link>
+
+        <Link href="/estudio">
+          <span>
+            📚
+          </span>
+
+          <span>
+            Estudio
+          </span>
+        </Link>
+
+        <Link href="/publicar">
+          <span>
+            ➕
+          </span>
+
+          <span>
+            Publicar
+          </span>
+        </Link>
+
+        <Link
+          href="/notificaciones"
+          className="active"
+        >
+          <span>
+            🔔
+          </span>
+
+          <span>
+            Actividad
+          </span>
+        </Link>
+
+        <Link href="/perfil">
+          <span>
+            👤
+          </span>
+
+          <span>
+            Perfil
+          </span>
+        </Link>
+      </nav>
+    </div>
   );
 }
-

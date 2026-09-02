@@ -28,78 +28,132 @@ type Recurso = {
   created_at: string;
 };
 
+const CARRERAS = [
+  "Administración",
+  "Contabilidad",
+  "Negocios Internacionales",
+  "Historia",
+];
+
+const SEMESTRES = [
+  "Nuevo ingreso",
+  "3.º semestre",
+  "5.º semestre",
+  "7.º semestre",
+];
+
 export default function EstudioPage() {
-  const [currentUserId, setCurrentUserId] =
-    useState("");
+  const [
+    currentUserId,
+    setCurrentUserId,
+  ] = useState("");
 
-  const [recursos, setRecursos] =
-    useState<Recurso[]>([]);
+  const [
+    recursos,
+    setRecursos,
+  ] = useState<Recurso[]>([]);
 
-  const [titulo, setTitulo] =
-    useState("");
+  const [
+    titulo,
+    setTitulo,
+  ] = useState("");
 
-  const [descripcion, setDescripcion] =
-    useState("");
+  const [
+    descripcion,
+    setDescripcion,
+  ] = useState("");
 
-  const [materia, setMateria] =
-    useState("");
+  const [
+    materia,
+    setMateria,
+  ] = useState("");
 
-  const [carrera, setCarrera] =
-    useState("");
+  const [
+    carrera,
+    setCarrera,
+  ] = useState("");
 
-  const [semestre, setSemestre] =
-    useState("");
+  const [
+    semestre,
+    setSemestre,
+  ] = useState("");
 
-  const [archivo, setArchivo] =
-    useState<File | null>(null);
+  const [
+    archivo,
+    setArchivo,
+  ] = useState<File | null>(
+    null
+  );
 
-  const [busqueda, setBusqueda] =
-    useState("");
+  const [
+    busqueda,
+    setBusqueda,
+  ] = useState("");
 
-  const [filtroCarrera, setFiltroCarrera] =
-    useState("");
+  const [
+    filtroCarrera,
+    setFiltroCarrera,
+  ] = useState("");
 
-  const [filtroSemestre, setFiltroSemestre] =
-    useState("");
+  const [
+    filtroSemestre,
+    setFiltroSemestre,
+  ] = useState("");
 
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
+  const [
+    mostrarFormulario,
+    setMostrarFormulario,
+  ] = useState(false);
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
 
-  const [subiendo, setSubiendo] =
-    useState(false);
+  const [
+    subiendo,
+    setSubiendo,
+  ] = useState(false);
 
-  const [mensaje, setMensaje] =
-    useState("");
+  const [
+    mensaje,
+    setMensaje,
+  ] = useState("");
 
   async function cargarRecursos() {
-    const supabase = createClient();
+    const supabase =
+      createClient();
 
-    const { data, error } =
-      await supabase
-        .from("resources")
-        .select(`
-          id,
-          user_id,
-          titulo,
-          descripcion,
-          materia,
-          carrera,
-          semestre,
-          archivo_path,
-          archivo_nombre,
-          archivo_tipo,
-          archivo_size,
-          created_at
-        `)
-        .order("created_at", {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("resources")
+      .select(`
+        id,
+        user_id,
+        titulo,
+        descripcion,
+        materia,
+        carrera,
+        semestre,
+        archivo_path,
+        archivo_nombre,
+        archivo_tipo,
+        archivo_size,
+        created_at
+      `)
+      .order(
+        "created_at",
+        {
           ascending: false,
-        });
+        }
+      );
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(
+        error.message
+      );
     }
 
     setRecursos(
@@ -115,11 +169,16 @@ export default function EstudioPage() {
         const user =
           await requerirUsuario();
 
-        if (!user || !activo) {
+        if (
+          !user ||
+          !activo
+        ) {
           return;
         }
 
-        setCurrentUserId(user.id);
+        setCurrentUserId(
+          user.id
+        );
 
         await cargarRecursos();
       } catch (error) {
@@ -134,7 +193,9 @@ export default function EstudioPage() {
         );
       } finally {
         if (activo) {
-          setCargando(false);
+          setCargando(
+            false
+          );
         }
       }
     }
@@ -168,10 +229,14 @@ export default function EstudioPage() {
       );
 
       e.target.value = "";
+
       return;
     }
 
-    setArchivo(seleccionado);
+    setArchivo(
+      seleccionado
+    );
+
     setMensaje("");
   }
 
@@ -184,6 +249,7 @@ export default function EstudioPage() {
       setMensaje(
         "Selecciona un archivo."
       );
+
       return;
     }
 
@@ -196,6 +262,7 @@ export default function EstudioPage() {
       setMensaje(
         "Completa los datos obligatorios."
       );
+
       return;
     }
 
@@ -220,19 +287,22 @@ export default function EstudioPage() {
         `${currentUserId}/${nombreUnico}`;
 
       const {
-        error: errorArchivo,
-      } = await supabase.storage
-        .from("resources")
-        .upload(
-          ruta,
-          archivo,
-          {
-            upsert: false,
-            contentType:
-              archivo.type ||
-              undefined,
-          }
-        );
+        error:
+          errorArchivo,
+      } =
+        await supabase.storage
+          .from("resources")
+          .upload(
+            ruta,
+            archivo,
+            {
+              upsert: false,
+
+              contentType:
+                archivo.type ||
+                undefined,
+            }
+          );
 
       if (errorArchivo) {
         throw new Error(
@@ -241,7 +311,8 @@ export default function EstudioPage() {
       }
 
       const {
-        error: errorRegistro,
+        error:
+          errorRegistro,
       } = await supabase
         .from("resources")
         .insert({
@@ -277,7 +348,9 @@ export default function EstudioPage() {
       if (errorRegistro) {
         await supabase.storage
           .from("resources")
-          .remove([ruta]);
+          .remove([
+            ruta,
+          ]);
 
         throw new Error(
           errorRegistro.message
@@ -291,7 +364,9 @@ export default function EstudioPage() {
       setSemestre("");
       setArchivo(null);
 
-      setMostrarFormulario(false);
+      setMostrarFormulario(
+        false
+      );
 
       await cargarRecursos();
     } catch (error) {
@@ -315,11 +390,12 @@ export default function EstudioPage() {
       const {
         data,
         error,
-      } = await supabase.storage
-        .from("resources")
-        .download(
-          recurso.archivo_path
-        );
+      } =
+        await supabase.storage
+          .from("resources")
+          .download(
+            recurso.archivo_path
+          );
 
       if (error) {
         throw new Error(
@@ -328,10 +404,14 @@ export default function EstudioPage() {
       }
 
       const url =
-        URL.createObjectURL(data);
+        URL.createObjectURL(
+          data
+        );
 
       const enlace =
-        document.createElement("a");
+        document.createElement(
+          "a"
+        );
 
       enlace.href = url;
 
@@ -345,7 +425,9 @@ export default function EstudioPage() {
       enlace.click();
       enlace.remove();
 
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(
+        url
+      );
     } catch (error) {
       alert(
         error instanceof Error
@@ -379,12 +461,14 @@ export default function EstudioPage() {
         createClient();
 
       const {
-        error: errorStorage,
-      } = await supabase.storage
-        .from("resources")
-        .remove([
-          recurso.archivo_path,
-        ]);
+        error:
+          errorStorage,
+      } =
+        await supabase.storage
+          .from("resources")
+          .remove([
+            recurso.archivo_path,
+          ]);
 
       if (errorStorage) {
         throw new Error(
@@ -393,7 +477,8 @@ export default function EstudioPage() {
       }
 
       const {
-        error: errorRegistro,
+        error:
+          errorRegistro,
       } = await supabase
         .from("resources")
         .delete()
@@ -436,7 +521,9 @@ export default function EstudioPage() {
       return "";
     }
 
-    if (bytes < 1024) {
+    if (
+      bytes < 1024
+    ) {
       return `${bytes} B`;
     }
 
@@ -459,19 +546,25 @@ export default function EstudioPage() {
     tipo: string | null
   ) {
     if (
-      tipo?.includes("pdf")
+      tipo?.includes(
+        "pdf"
+      )
     ) {
       return "📕";
     }
 
     if (
-      tipo?.includes("image")
+      tipo?.includes(
+        "image"
+      )
     ) {
       return "🖼️";
     }
 
     if (
-      tipo?.includes("word")
+      tipo?.includes(
+        "word"
+      )
     ) {
       return "📘";
     }
@@ -485,6 +578,21 @@ export default function EstudioPage() {
     }
 
     return "📄";
+  }
+
+  function fechaBonita(
+    fecha: string
+  ) {
+    return new Date(
+      fecha
+    ).toLocaleDateString(
+      "es-MX",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    );
   }
 
   const recursosFiltrados =
@@ -535,6 +643,13 @@ export default function EstudioPage() {
       filtroSemestre,
     ]);
 
+  const misRecursos =
+    recursos.filter(
+      (recurso) =>
+        recurso.user_id ===
+        currentUserId
+    ).length;
+
   if (cargando) {
     return (
       <main className="loadingScreen">
@@ -552,457 +667,1234 @@ export default function EstudioPage() {
   }
 
   return (
-    <main className="content">
-      <section className="welcome">
-        <div>
-          <p className="tiny">
-            CENTRO DE ESTUDIO
-          </p>
-
-          <h2>
-            Recursos 📚
-          </h2>
-
-          <p>
-            Comparte apuntes, documentos,
-            presentaciones y materiales
-            útiles con otros estudiantes.
-          </p>
-        </div>
-
-        <div className="welcomeOtter">
-          📚
-        </div>
-      </section>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginTop: "20px",
-        }}
-      >
+    <div className="app">
+      <header className="topbar">
         <Link
           href="/"
-          className="primaryButton"
+          className="brand"
         >
-          ← Inicio
+          <span className="logo">
+            🦦
+          </span>
+
+          <div>
+            <h1>
+              Uniónutriita
+            </h1>
+
+            <p>
+              Comunidad ENES Oaxaca
+            </p>
+          </div>
         </Link>
 
-        <button
-          type="button"
-          className="primaryButton"
-          onClick={() =>
-            setMostrarFormulario(
-              !mostrarFormulario
-            )
-          }
-        >
-          {mostrarFormulario
-            ? "Cancelar"
-            : "＋ Subir recurso"}
-        </button>
-      </div>
-
-      {mostrarFormulario && (
-        <section
-          className="profileCard"
-          style={{
-            maxWidth: "700px",
-            marginTop: "22px",
-          }}
-        >
-          <h2>
-            Nuevo recurso
-          </h2>
-
-          <form
-            className="authForm"
-            onSubmit={subirRecurso}
+        <div className="topActions">
+          <Link
+            href="/buscar"
+            className="circleButton"
+            aria-label="Buscar"
+            title="Buscar"
           >
-            <label>
-              Título
+            🔎
+          </Link>
 
-              <input
-                value={titulo}
-                onChange={(e) =>
-                  setTitulo(
-                    e.target.value
-                  )
-                }
-                placeholder="Ej. Resumen Unidad 3"
-                maxLength={120}
-                required
-              />
-            </label>
+          <Link
+            href="/notificaciones"
+            className="circleButton"
+            aria-label="Notificaciones"
+            title="Notificaciones"
+          >
+            🔔
+          </Link>
 
-            <label>
-              Materia
-
-              <input
-                value={materia}
-                onChange={(e) =>
-                  setMateria(
-                    e.target.value
-                  )
-                }
-                placeholder="Ej. Finanzas"
-                maxLength={100}
-                required
-              />
-            </label>
-
-            <label>
-              Carrera
-
-              <select
-                value={carrera}
-                onChange={(e) =>
-                  setCarrera(
-                    e.target.value
-                  )
-                }
-                required
-              >
-                <option value="">
-                  Selecciona
-                </option>
-
-                <option value="Administración">
-                  Administración
-                </option>
-
-                <option value="Contabilidad">
-                  Contabilidad
-                </option>
-
-                <option value="Negocios Internacionales">
-                  Negocios Internacionales
-                </option>
-
-                <option value="Historia">
-                  Historia
-                </option>
-              </select>
-            </label>
-
-            <label>
-              Semestre
-
-              <select
-                value={semestre}
-                onChange={(e) =>
-                  setSemestre(
-                    e.target.value
-                  )
-                }
-                required
-              >
-                <option value="">
-                  Selecciona
-                </option>
-
-                <option value="Nuevo ingreso">
-                  Nuevo ingreso
-                </option>
-
-                <option value="3.º semestre">
-                  3.º semestre
-                </option>
-
-                <option value="5.º semestre">
-                  5.º semestre
-                </option>
-
-                <option value="7.º semestre">
-                  7.º semestre
-                </option>
-              </select>
-            </label>
-
-            <label>
-              Descripción
-
-              <textarea
-                value={descripcion}
-                onChange={(e) =>
-                  setDescripcion(
-                    e.target.value
-                  )
-                }
-                rows={4}
-                maxLength={500}
-                placeholder="¿Qué contiene este recurso?"
-              />
-            </label>
-
-            <label>
-              Archivo
-
-              <input
-                type="file"
-                onChange={
-                  seleccionarArchivo
-                }
-                required
-              />
-            </label>
-
-            {archivo && (
-              <small>
-                📎 {archivo.name} ·{" "}
-                {tamanoBonito(
-                  archivo.size
-                )}
-              </small>
-            )}
-
-            <button
-              type="submit"
-              className="authButton"
-              disabled={subiendo}
-            >
-              {subiendo
-                ? "Subiendo..."
-                : "Publicar recurso"}
-            </button>
-          </form>
-        </section>
-      )}
-
-      {mensaje && (
-        <div
-          className="errorBox"
-          style={{
-            marginTop: "20px",
-          }}
-        >
-          {mensaje}
+          <Link
+            href="/perfil"
+            className="profileButton profileLink"
+            aria-label="Mi perfil"
+            title="Mi perfil"
+          >
+            👤
+          </Link>
         </div>
-      )}
+      </header>
 
-      <section
-        style={{
-          marginTop: "28px",
-        }}
-      >
-        <p className="tiny">
-          BIBLIOTECA
-        </p>
+      <div className="layout">
+        <aside className="sidebar">
+          <p className="sidebarTitle">
+            Explorar
+          </p>
 
-        <h2>
-          Explorar materiales
-        </h2>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "2fr 1fr 1fr",
-            gap: "10px",
-            marginBottom: "20px",
-          }}
-        >
-          <input
-            value={busqueda}
-            onChange={(e) =>
-              setBusqueda(
-                e.target.value
-              )
-            }
-            placeholder="🔎 Buscar materia, título o archivo..."
-            style={{
-              padding: "12px",
-              border:
-                "1px solid #e5ddcf",
-              borderRadius: "14px",
-            }}
-          />
-
-          <select
-            value={filtroCarrera}
-            onChange={(e) =>
-              setFiltroCarrera(
-                e.target.value
-              )
-            }
-            style={{
-              padding: "12px",
-              border:
-                "1px solid #e5ddcf",
-              borderRadius: "14px",
-            }}
+          <Link
+            href="/"
+            className="menuButton"
           >
-            <option value="">
-              Todas las carreras
-            </option>
+            <span className="menuIcon">
+              🏠
+            </span>
 
-            <option value="Administración">
-              Administración
-            </option>
+            Inicio
+          </Link>
 
-            <option value="Contabilidad">
-              Contabilidad
-            </option>
-
-            <option value="Negocios Internacionales">
-              Negocios Internacionales
-            </option>
-
-            <option value="Historia">
-              Historia
-            </option>
-          </select>
-
-          <select
-            value={filtroSemestre}
-            onChange={(e) =>
-              setFiltroSemestre(
-                e.target.value
-              )
-            }
-            style={{
-              padding: "12px",
-              border:
-                "1px solid #e5ddcf",
-              borderRadius: "14px",
-            }}
+          <Link
+            href="/estudio"
+            className="menuButton selected"
           >
-            <option value="">
-              Todos los semestres
-            </option>
-
-            <option value="Nuevo ingreso">
-              Nuevo ingreso
-            </option>
-
-            <option value="3.º semestre">
-              3.º semestre
-            </option>
-
-            <option value="5.º semestre">
-              5.º semestre
-            </option>
-
-            <option value="7.º semestre">
-              7.º semestre
-            </option>
-          </select>
-        </div>
-
-        {recursosFiltrados.length === 0 ? (
-          <div className="emptyState">
-            <span className="emptyStateIcon">
+            <span className="menuIcon">
               📚
             </span>
 
-            No encontramos recursos.
+            Estudio
+          </Link>
+
+          <Link
+            href="/comunidades"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🫂
+            </span>
+
+            Comunidades
+          </Link>
+
+          <Link
+            href="/eventos"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🎉
+            </span>
+
+            Eventos
+          </Link>
+
+          <Link
+            href="/conexiones"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🤝
+            </span>
+
+            Conexiones
+          </Link>
+
+          <Link
+            href="/guardados"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔖
+            </span>
+
+            Guardados
+          </Link>
+
+          <Link
+            href="/social"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🌿
+            </span>
+
+            Social
+          </Link>
+
+          <div className="otterCard">
+            <span className="bigOtter">
+              📚
+            </span>
+
+            <div>
+              <strong>
+                Biblioteca
+              </strong>
+
+              <p>
+                Aprende y comparte
+              </p>
+            </div>
           </div>
-        ) : (
-          <div
+        </aside>
+
+        <main className="content">
+          <section className="welcome">
+            <div>
+              <p className="tiny">
+                CENTRO DE ESTUDIO
+              </p>
+
+              <h2>
+                Recursos 📚
+              </h2>
+
+              <p>
+                Encuentra apuntes,
+                documentos,
+                presentaciones y
+                materiales compartidos
+                por la comunidad.
+              </p>
+            </div>
+
+            <div className="welcomeOtter">
+              📚
+            </div>
+          </section>
+
+          <section
             style={{
-              display: "grid",
+              display:
+                "grid",
+
               gridTemplateColumns:
-                "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "14px",
+                "repeat(auto-fit, minmax(150px, 1fr))",
+
+              gap:
+                "10px",
+
+              marginTop:
+                "20px",
             }}
           >
-            {recursosFiltrados.map(
-              (recurso) => (
-                <article
-                  key={recurso.id}
-                  className="card"
-                >
-                  <div
-                    style={{
-                      fontSize: "38px",
-                    }}
-                  >
-                    {iconoArchivo(
-                      recurso.archivo_tipo
-                    )}
-                  </div>
+            <article className="card">
+              <p className="tiny">
+                BIBLIOTECA
+              </p>
 
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
+                }}
+              >
+                {recursos.length}
+              </strong>
+
+              <p>
+                recursos disponibles
+              </p>
+            </article>
+
+            <article className="card">
+              <p className="tiny">
+                RESULTADOS
+              </p>
+
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
+                }}
+              >
+                {
+                  recursosFiltrados.length
+                }
+              </strong>
+
+              <p>
+                con los filtros actuales
+              </p>
+            </article>
+
+            <article className="card">
+              <p className="tiny">
+                MIS APORTES
+              </p>
+
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginTop:
+                    "5px",
+
+                  fontSize:
+                    "25px",
+                }}
+              >
+                {misRecursos}
+              </strong>
+
+              <p>
+                recursos compartidos
+              </p>
+            </article>
+          </section>
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "space-between",
+
+              gap:
+                "10px",
+
+              flexWrap:
+                "wrap",
+
+              marginTop:
+                "20px",
+            }}
+          >
+            <div
+              style={{
+                display:
+                  "flex",
+
+                gap:
+                  "8px",
+
+                flexWrap:
+                  "wrap",
+              }}
+            >
+              <Link
+                href="/"
+                className="backHomeButton"
+              >
+                ← Inicio
+              </Link>
+
+              <Link
+                href="/guardados"
+                className="backHomeButton"
+              >
+                🔖 Guardados
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              className="primaryButton"
+              onClick={() =>
+                setMostrarFormulario(
+                  !mostrarFormulario
+                )
+              }
+            >
+              {mostrarFormulario
+                ? "✕ Cerrar formulario"
+                : "＋ Subir recurso"}
+            </button>
+          </div>
+
+          {mostrarFormulario && (
+            <section
+              className="card"
+              style={{
+                maxWidth:
+                  "820px",
+
+                marginTop:
+                  "18px",
+
+                padding:
+                  "24px",
+              }}
+            >
+              <div
+                style={{
+                  display:
+                    "flex",
+
+                  justifyContent:
+                    "space-between",
+
+                  alignItems:
+                    "flex-start",
+
+                  gap:
+                    "15px",
+
+                  marginBottom:
+                    "20px",
+                }}
+              >
+                <div>
                   <p className="tiny">
-                    {recurso.materia}
+                    COMPARTIR
                   </p>
 
-                  <h3>
-                    {recurso.titulo}
-                  </h3>
+                  <h2
+                    style={{
+                      margin:
+                        "5px 0",
+                    }}
+                  >
+                    Nuevo recurso
+                  </h2>
 
                   <p
                     style={{
-                      color: "#70746a",
-                      fontSize: "13px",
+                      margin: 0,
+
+                      color:
+                        "#70746a",
+
+                      fontSize:
+                        "13px",
+
+                      lineHeight:
+                        1.5,
                     }}
                   >
-                    {recurso.descripcion ||
-                      "Sin descripción."}
+                    Sube un material útil
+                    para que otros
+                    estudiantes puedan
+                    consultarlo.
                   </p>
+                </div>
 
-                  <p
-                    style={{
-                      color: "#969188",
-                      fontSize: "11px",
-                    }}
-                  >
-                    {recurso.carrera}
-                    {" · "}
-                    {recurso.semestre}
-                  </p>
+                <span
+                  style={{
+                    fontSize:
+                      "34px",
+                  }}
+                >
+                  📤
+                </span>
+              </div>
 
-                  <p
-                    style={{
-                      color: "#969188",
-                      fontSize: "11px",
-                    }}
-                  >
-                    📎{" "}
-                    {
-                      recurso.archivo_nombre
-                    }
+              <form
+                className="authForm"
+                onSubmit={
+                  subirRecurso
+                }
+              >
+                <div
+                  style={{
+                    display:
+                      "grid",
 
-                    {recurso.archivo_size
-                      ? ` · ${tamanoBonito(
-                          recurso.archivo_size
-                        )}`
-                      : ""}
-                  </p>
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(220px, 1fr))",
 
-                  <button
-                    type="button"
-                    className="primaryButton"
-                    onClick={() =>
-                      descargar(
-                        recurso
-                      )
-                    }
-                  >
-                    ⬇ Descargar
-                  </button>
+                    gap:
+                      "14px",
+                  }}
+                >
+                  <label>
+                    Título
 
-                  {recurso.user_id ===
-                    currentUserId && (
-                    <button
-                      type="button"
-                      className="logoutButton"
-                      onClick={() =>
-                        eliminar(
-                          recurso
+                    <input
+                      value={titulo}
+                      onChange={(e) =>
+                        setTitulo(
+                          e.target.value
                         )
                       }
+                      placeholder="Ej. Resumen Unidad 3"
+                      maxLength={120}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Materia
+
+                    <input
+                      value={materia}
+                      onChange={(e) =>
+                        setMateria(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Ej. Finanzas"
+                      maxLength={100}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Carrera
+
+                    <select
+                      value={carrera}
+                      onChange={(e) =>
+                        setCarrera(
+                          e.target.value
+                        )
+                      }
+                      required
                     >
-                      🗑 Eliminar
-                    </button>
+                      <option value="">
+                        Selecciona una carrera
+                      </option>
+
+                      {CARRERAS.map(
+                        (item) => (
+                          <option
+                            key={item}
+                            value={item}
+                          >
+                            {item}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Semestre
+
+                    <select
+                      value={semestre}
+                      onChange={(e) =>
+                        setSemestre(
+                          e.target.value
+                        )
+                      }
+                      required
+                    >
+                      <option value="">
+                        Selecciona un semestre
+                      </option>
+
+                      {SEMESTRES.map(
+                        (item) => (
+                          <option
+                            key={item}
+                            value={item}
+                          >
+                            {item}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+                </div>
+
+                <label>
+                  Descripción
+
+                  <textarea
+                    value={descripcion}
+                    onChange={(e) =>
+                      setDescripcion(
+                        e.target.value
+                      )
+                    }
+                    rows={4}
+                    maxLength={500}
+                    placeholder="Describe brevemente qué contiene el recurso..."
+                  />
+                </label>
+
+                <label>
+                  Archivo
+
+                  <input
+                    type="file"
+                    onChange={
+                      seleccionarArchivo
+                    }
+                    required
+                  />
+                </label>
+
+                <div
+                  style={{
+                    padding:
+                      "12px 14px",
+
+                    border:
+                      "1px dashed #d5ccbd",
+
+                    borderRadius:
+                      "13px",
+
+                    background:
+                      "#f7f4ee",
+
+                    color:
+                      "#70746a",
+
+                    fontSize:
+                      "12px",
+
+                    lineHeight:
+                      1.5,
+                  }}
+                >
+                  {archivo ? (
+                    <>
+                      <strong>
+                        📎 {archivo.name}
+                      </strong>
+
+                      <span>
+                        {" · "}
+                        {tamanoBonito(
+                          archivo.size
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      📁 Selecciona el
+                      archivo que quieres
+                      compartir. Tamaño
+                      máximo: 10 MB.
+                    </>
                   )}
-                </article>
-              )
+                </div>
+
+                <button
+                  type="submit"
+                  className="authButton"
+                  disabled={subiendo}
+                >
+                  {subiendo
+                    ? "Subiendo recurso..."
+                    : "📤 Publicar recurso"}
+                </button>
+              </form>
+            </section>
+          )}
+
+          {mensaje && (
+            <div
+              className="errorBox"
+              style={{
+                marginTop:
+                  "18px",
+              }}
+            >
+              {mensaje}
+            </div>
+          )}
+
+          <section
+            style={{
+              marginTop:
+                "30px",
+
+              paddingBottom:
+                "60px",
+            }}
+          >
+            <div
+              className="sectionHeader"
+            >
+              <p className="tiny">
+                BIBLIOTECA
+              </p>
+
+              <h2>
+                Explorar materiales
+              </h2>
+            </div>
+
+            <div
+              className="card"
+              style={{
+                display:
+                  "grid",
+
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(210px, 1fr))",
+
+                gap:
+                  "10px",
+
+                marginBottom:
+                  "18px",
+
+                padding:
+                  "14px",
+              }}
+            >
+              <div
+                className="searchBox"
+                style={{
+                  width:
+                    "100%",
+                }}
+              >
+                <span>
+                  🔎
+                </span>
+
+                <input
+                  value={busqueda}
+                  onChange={(e) =>
+                    setBusqueda(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Buscar título, materia o archivo..."
+                />
+              </div>
+
+              <select
+                value={
+                  filtroCarrera
+                }
+                onChange={(e) =>
+                  setFiltroCarrera(
+                    e.target.value
+                  )
+                }
+                style={{
+                  width:
+                    "100%",
+
+                  minHeight:
+                    "44px",
+
+                  padding:
+                    "10px 12px",
+
+                  border:
+                    "1px solid #d5ccbd",
+
+                  borderRadius:
+                    "13px",
+
+                  outline:
+                    "none",
+
+                  background:
+                    "#f6f3ec",
+
+                  color:
+                    "#30352d",
+                }}
+              >
+                <option value="">
+                  Todas las carreras
+                </option>
+
+                {CARRERAS.map(
+                  (item) => (
+                    <option
+                      key={item}
+                      value={item}
+                    >
+                      {item}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <select
+                value={
+                  filtroSemestre
+                }
+                onChange={(e) =>
+                  setFiltroSemestre(
+                    e.target.value
+                  )
+                }
+                style={{
+                  width:
+                    "100%",
+
+                  minHeight:
+                    "44px",
+
+                  padding:
+                    "10px 12px",
+
+                  border:
+                    "1px solid #d5ccbd",
+
+                  borderRadius:
+                    "13px",
+
+                  outline:
+                    "none",
+
+                  background:
+                    "#f6f3ec",
+
+                  color:
+                    "#30352d",
+                }}
+              >
+                <option value="">
+                  Todos los semestres
+                </option>
+
+                {SEMESTRES.map(
+                  (item) => (
+                    <option
+                      key={item}
+                      value={item}
+                    >
+                      {item}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <div
+              style={{
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "space-between",
+
+                gap:
+                  "10px",
+
+                flexWrap:
+                  "wrap",
+
+                marginBottom:
+                  "14px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+
+                  color:
+                    "#70746a",
+
+                  fontSize:
+                    "12px",
+                }}
+              >
+                Mostrando{" "}
+                <strong>
+                  {
+                    recursosFiltrados.length
+                  }
+                </strong>{" "}
+                de{" "}
+                <strong>
+                  {recursos.length}
+                </strong>{" "}
+                recursos
+              </p>
+
+              {(busqueda ||
+                filtroCarrera ||
+                filtroSemestre) && (
+                <span
+                  className="tag"
+                  style={{
+                    marginTop:
+                      0,
+                  }}
+                >
+                  🔎 Filtros activos
+                </span>
+              )}
+            </div>
+
+            {recursosFiltrados.length ===
+            0 ? (
+              <div className="emptyState">
+                <span className="emptyStateIcon">
+                  📚
+                </span>
+
+                <strong>
+                  No encontramos recursos
+                </strong>
+
+                <p
+                  style={{
+                    marginBottom:
+                      0,
+                  }}
+                >
+                  Prueba con otra búsqueda
+                  o cambia los filtros.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display:
+                    "grid",
+
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(270px, 1fr))",
+
+                  gap:
+                    "14px",
+                }}
+              >
+                {recursosFiltrados.map(
+                  (recurso) => {
+                    const esMio =
+                      recurso.user_id ===
+                      currentUserId;
+
+                    return (
+                      <article
+                        key={
+                          recurso.id
+                        }
+                        className="card"
+                        style={{
+                          display:
+                            "flex",
+
+                          flexDirection:
+                            "column",
+
+                          minHeight:
+                            "315px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display:
+                              "flex",
+
+                            alignItems:
+                              "flex-start",
+
+                            justifyContent:
+                              "space-between",
+
+                            gap:
+                              "12px",
+                          }}
+                        >
+                          <div
+                            className="cardIcon"
+                            style={{
+                              fontSize:
+                                "25px",
+                            }}
+                          >
+                            {iconoArchivo(
+                              recurso.archivo_tipo
+                            )}
+                          </div>
+
+                          {esMio && (
+                            <span
+                              style={{
+                                padding:
+                                  "5px 8px",
+
+                                borderRadius:
+                                  "999px",
+
+                                background:
+                                  "#e5eedc",
+
+                                color:
+                                  "#506347",
+
+                                fontSize:
+                                  "10px",
+
+                                fontWeight:
+                                  800,
+                              }}
+                            >
+                              Mi recurso
+                            </span>
+                          )}
+                        </div>
+
+                        <p
+                          className="tiny"
+                          style={{
+                            marginTop:
+                              "15px",
+                          }}
+                        >
+                          {
+                            recurso.materia
+                          }
+                        </p>
+
+                        <h3
+                          style={{
+                            margin:
+                              "6px 0 4px",
+
+                            fontSize:
+                              "17px",
+
+                            lineHeight:
+                              1.3,
+                          }}
+                        >
+                          {
+                            recurso.titulo
+                          }
+                        </h3>
+
+                        <p
+                          style={{
+                            margin:
+                              "5px 0",
+
+                            color:
+                              "#70746a",
+
+                            fontSize:
+                              "13px",
+
+                            lineHeight:
+                              1.55,
+                          }}
+                        >
+                          {recurso.descripcion ||
+                            "Sin descripción."}
+                        </p>
+
+                        <div
+                          style={{
+                            display:
+                              "flex",
+
+                            gap:
+                              "6px",
+
+                            flexWrap:
+                              "wrap",
+
+                            marginTop:
+                              "8px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              padding:
+                                "5px 8px",
+
+                              borderRadius:
+                                "999px",
+
+                              background:
+                                "#f3f0e8",
+
+                              color:
+                                "#686e63",
+
+                              fontSize:
+                                "10px",
+                            }}
+                          >
+                            🎓{" "}
+                            {
+                              recurso.carrera
+                            }
+                          </span>
+
+                          <span
+                            style={{
+                              padding:
+                                "5px 8px",
+
+                              borderRadius:
+                                "999px",
+
+                              background:
+                                "#f3f0e8",
+
+                              color:
+                                "#686e63",
+
+                              fontSize:
+                                "10px",
+                            }}
+                          >
+                            📅{" "}
+                            {
+                              recurso.semestre
+                            }
+                          </span>
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop:
+                              "14px",
+
+                            padding:
+                              "10px 11px",
+
+                            borderRadius:
+                              "12px",
+
+                            background:
+                              "#f7f4ee",
+
+                            color:
+                              "#7d7971",
+
+                            fontSize:
+                              "11px",
+
+                            overflowWrap:
+                              "anywhere",
+                          }}
+                        >
+                          <div>
+                            📎{" "}
+                            {
+                              recurso.archivo_nombre
+                            }
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop:
+                                "4px",
+
+                              color:
+                                "#969188",
+                            }}
+                          >
+                            {recurso.archivo_size
+                              ? tamanoBonito(
+                                  recurso.archivo_size
+                                )
+                              : "Tamaño no disponible"}
+
+                            {" · "}
+
+                            {fechaBonita(
+                              recurso.created_at
+                            )}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display:
+                              "flex",
+
+                            gap:
+                              "8px",
+
+                            flexWrap:
+                              "wrap",
+
+                            marginTop:
+                              "auto",
+
+                            paddingTop:
+                              "16px",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="primaryButton"
+                            onClick={() =>
+                              descargar(
+                                recurso
+                              )
+                            }
+                          >
+                            ⬇ Descargar
+                          </button>
+
+                          {esMio && (
+                            <button
+                              type="button"
+                              className="logoutButton"
+                              onClick={() =>
+                                eliminar(
+                                  recurso
+                                )
+                              }
+                            >
+                              🗑 Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  }
+                )}
+              </div>
             )}
-          </div>
-        )}
-      </section>
-    </main>
+          </section>
+        </main>
+      </div>
+
+      <nav className="mobileNav">
+        <Link href="/">
+          <span>
+            🏠
+          </span>
+
+          <span>
+            Inicio
+          </span>
+        </Link>
+
+        <Link
+          href="/estudio"
+          className="active"
+        >
+          <span>
+            📚
+          </span>
+
+          <span>
+            Estudio
+          </span>
+        </Link>
+
+        <Link href="/publicar">
+          <span>
+            ➕
+          </span>
+
+          <span>
+            Publicar
+          </span>
+        </Link>
+
+        <Link href="/guardados">
+          <span>
+            🔖
+          </span>
+
+          <span>
+            Guardados
+          </span>
+        </Link>
+
+        <Link href="/perfil">
+          <span>
+            👤
+          </span>
+
+          <span>
+            Perfil
+          </span>
+        </Link>
+      </nav>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import Link from "next/link";
 
 import { createClient } from "../lib/supabase/client";
@@ -18,6 +19,7 @@ import type {
 
 import PostCard from "../components/PostCard";
 import ChatPanel from "../components/ChatPanel";
+import GlobalSearchBar from "../components/GlobalSearchBar";
 
 type FiltroFeed =
   | "Todos"
@@ -25,28 +27,109 @@ type FiltroFeed =
   | "Pregunta"
   | "Ayuda";
 
+type RecursoReciente = {
+  id: string;
+  titulo: string;
+  materia: string;
+  created_at: string;
+};
+
+type EventoProximo = {
+  id: string;
+  titulo: string;
+  lugar: string;
+  fecha_inicio: string;
+};
+
+type SocialReciente = {
+  id: string;
+  titulo: string;
+  categoria: string;
+  calificacion: number | null;
+  created_at: string;
+};
+
+type EstadisticasInicio = {
+  publicaciones: number;
+  recursos: number;
+  eventos: number;
+  social: number;
+};
+
 export default function HomePage() {
   const [
     currentUserId,
     setCurrentUserId,
   ] = useState("");
 
-  const [perfil, setPerfil] =
+  const [
+    perfil,
+    setPerfil,
+  ] =
     useState<PerfilResumen | null>(
       null
     );
 
-  const [posts, setPosts] =
-    useState<PostConAutor[]>([]);
+  const [
+    posts,
+    setPosts,
+  ] =
+    useState<PostConAutor[]>(
+      []
+    );
 
-  const [filtro, setFiltro] =
-    useState<FiltroFeed>("Todos");
+  const [
+    filtro,
+    setFiltro,
+  ] =
+    useState<FiltroFeed>(
+      "Todos"
+    );
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [
+    recursoReciente,
+    setRecursoReciente,
+  ] =
+    useState<RecursoReciente | null>(
+      null
+    );
 
-  const [mensaje, setMensaje] =
-    useState("");
+  const [
+    eventoProximo,
+    setEventoProximo,
+  ] =
+    useState<EventoProximo | null>(
+      null
+    );
+
+  const [
+    socialReciente,
+    setSocialReciente,
+  ] =
+    useState<SocialReciente | null>(
+      null
+    );
+
+  const [
+    estadisticas,
+    setEstadisticas,
+  ] =
+    useState<EstadisticasInicio>({
+      publicaciones: 0,
+      recursos: 0,
+      eventos: 0,
+      social: 0,
+    });
+
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
+
+  const [
+    mensaje,
+    setMensaje,
+  ] = useState("");
 
   useEffect(() => {
     let activo = true;
@@ -56,7 +139,10 @@ export default function HomePage() {
         const user =
           await requerirUsuario();
 
-        if (!user || !activo) {
+        if (
+          !user ||
+          !activo
+        ) {
           return;
         }
 
@@ -67,83 +153,289 @@ export default function HomePage() {
         const supabase =
           createClient();
 
-        const {
-          data: perfilData,
-          error: perfilError,
-        } = await supabase
-          .from("profiles")
-          .select(`
-            id,
-            username,
-            nombre,
-            carrera,
-            semestre,
-            avatar_url
-          `)
-          .eq("id", user.id)
-          .maybeSingle();
+        const ahora =
+          new Date().toISOString();
 
-        if (perfilError) {
-          throw new Error(
-            `No pudimos cargar tu perfil: ${perfilError.message}`
-          );
-        }
+        const [
+          perfilResultado,
+          postsResultado,
+          recursoResultado,
+          eventoResultado,
+          socialResultado,
+          totalPostsResultado,
+          totalRecursosResultado,
+          totalEventosResultado,
+          totalSocialResultado,
+        ] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select(`
+              id,
+              username,
+              nombre,
+              carrera,
+              semestre,
+              avatar_url
+            `)
+            .eq(
+              "id",
+              user.id
+            )
+            .maybeSingle(),
 
-        if (!activo) {
-          return;
-        }
+          supabase
+            .from("posts")
+            .select(`
+              id,
+              user_id,
+              tipo,
+              contenido,
+              created_at,
+              updated_at
+            `)
+            .order(
+              "created_at",
+              {
+                ascending: false,
+              }
+            ),
 
-        if (perfilData) {
-          setPerfil(
-            perfilData as PerfilResumen
-          );
-        }
+          supabase
+            .from("resources")
+            .select(`
+              id,
+              titulo,
+              materia,
+              created_at
+            `)
+            .order(
+              "created_at",
+              {
+                ascending: false,
+              }
+            )
+            .limit(1)
+            .maybeSingle(),
 
-        const {
-          data: postsData,
-          error: postsError,
-        } = await supabase
-          .from("posts")
-          .select(`
-            id,
-            user_id,
-            tipo,
-            contenido,
-            created_at,
-            updated_at
-          `)
-          .order("created_at", {
-            ascending: false,
-          });
+          supabase
+            .from("events")
+            .select(`
+              id,
+              titulo,
+              lugar,
+              fecha_inicio
+            `)
+            .gte(
+              "fecha_inicio",
+              ahora
+            )
+            .order(
+              "fecha_inicio",
+              {
+                ascending: true,
+              }
+            )
+            .limit(1)
+            .maybeSingle(),
 
-        if (postsError) {
-          throw new Error(
-            `No pudimos cargar las publicaciones: ${postsError.message}`
-          );
-        }
+          supabase
+            .from("social_posts")
+            .select(`
+              id,
+              titulo,
+              categoria,
+              calificacion,
+              created_at
+            `)
+            .order(
+              "created_at",
+              {
+                ascending: false,
+              }
+            )
+            .limit(1)
+            .maybeSingle(),
 
-        if (!activo) {
-          return;
-        }
+          supabase
+            .from("posts")
+            .select(
+              "id",
+              {
+                count: "exact",
+                head: true,
+              }
+            ),
 
-        const publicaciones =
-          (postsData || []) as PostBase[];
+          supabase
+            .from("resources")
+            .select(
+              "id",
+              {
+                count: "exact",
+                head: true,
+              }
+            ),
+
+          supabase
+            .from("events")
+            .select(
+              "id",
+              {
+                count: "exact",
+                head: true,
+              }
+            )
+            .gte(
+              "fecha_inicio",
+              ahora
+            ),
+
+          supabase
+            .from("social_posts")
+            .select(
+              "id",
+              {
+                count: "exact",
+                head: true,
+              }
+            ),
+        ]);
 
         if (
-          publicaciones.length === 0
+          perfilResultado.error
+        ) {
+          throw new Error(
+            `No pudimos cargar tu perfil: ${perfilResultado.error.message}`
+          );
+        }
+
+        if (
+          postsResultado.error
+        ) {
+          throw new Error(
+            `No pudimos cargar las publicaciones: ${postsResultado.error.message}`
+          );
+        }
+
+        if (
+          recursoResultado.error
+        ) {
+          throw new Error(
+            `No pudimos cargar Estudio: ${recursoResultado.error.message}`
+          );
+        }
+
+        if (
+          eventoResultado.error
+        ) {
+          throw new Error(
+            `No pudimos cargar Eventos: ${eventoResultado.error.message}`
+          );
+        }
+
+        if (
+          socialResultado.error
+        ) {
+          throw new Error(
+            `No pudimos cargar Social: ${socialResultado.error.message}`
+          );
+        }
+
+        if (
+          totalPostsResultado.error
+        ) {
+          throw new Error(
+            `No pudimos contar las publicaciones: ${totalPostsResultado.error.message}`
+          );
+        }
+
+        if (
+          totalRecursosResultado.error
+        ) {
+          throw new Error(
+            `No pudimos contar los recursos: ${totalRecursosResultado.error.message}`
+          );
+        }
+
+        if (
+          totalEventosResultado.error
+        ) {
+          throw new Error(
+            `No pudimos contar los eventos: ${totalEventosResultado.error.message}`
+          );
+        }
+
+        if (
+          totalSocialResultado.error
+        ) {
+          throw new Error(
+            `No pudimos contar las recomendaciones: ${totalSocialResultado.error.message}`
+          );
+        }
+
+        if (!activo) {
+          return;
+        }
+
+        if (
+          perfilResultado.data
+        ) {
+          setPerfil(
+            perfilResultado.data as PerfilResumen
+          );
+        }
+
+        setRecursoReciente(
+          recursoResultado.data as RecursoReciente | null
+        );
+
+        setEventoProximo(
+          eventoResultado.data as EventoProximo | null
+        );
+
+        setSocialReciente(
+          socialResultado.data as SocialReciente | null
+        );
+
+        setEstadisticas({
+          publicaciones:
+            totalPostsResultado.count ||
+            0,
+
+          recursos:
+            totalRecursosResultado.count ||
+            0,
+
+          eventos:
+            totalEventosResultado.count ||
+            0,
+
+          social:
+            totalSocialResultado.count ||
+            0,
+        });
+
+        const publicaciones =
+          (postsResultado.data ||
+            []) as PostBase[];
+
+        if (
+          publicaciones.length ===
+          0
         ) {
           setPosts([]);
           return;
         }
 
-        const idsAutores = [
-          ...new Set(
-            publicaciones.map(
-              (post) =>
-                post.user_id
+        const idsAutores =
+          Array.from(
+            new Set(
+              publicaciones.map(
+                (post) =>
+                  post.user_id
+              )
             )
-          ),
-        ];
+          );
 
         const {
           data: autoresData,
@@ -163,7 +455,9 @@ export default function HomePage() {
             idsAutores
           );
 
-        if (autoresError) {
+        if (
+          autoresError
+        ) {
           throw new Error(
             `No pudimos cargar los autores: ${autoresError.message}`
           );
@@ -220,7 +514,9 @@ export default function HomePage() {
         );
       } finally {
         if (activo) {
-          setCargando(false);
+          setCargando(
+            false
+          );
         }
       }
     }
@@ -234,15 +530,63 @@ export default function HomePage() {
 
   const postsFiltrados =
     useMemo(() => {
-      if (filtro === "Todos") {
+      if (
+        filtro ===
+        "Todos"
+      ) {
         return posts;
       }
 
       return posts.filter(
         (post) =>
-          post.tipo === filtro
+          post.tipo ===
+          filtro
       );
-    }, [posts, filtro]);
+    }, [
+      posts,
+      filtro,
+    ]);
+
+  function iconoSocial(
+    categoria: string
+  ) {
+    if (
+      categoria ===
+      "restaurante"
+    ) {
+      return "🍜";
+    }
+
+    if (
+      categoria ===
+      "lugar"
+    ) {
+      return "📍";
+    }
+
+    if (
+      categoria ===
+      "videojuego"
+    ) {
+      return "🎮";
+    }
+
+    if (
+      categoria ===
+      "musica"
+    ) {
+      return "🎵";
+    }
+
+    if (
+      categoria ===
+      "lectura"
+    ) {
+      return "📖";
+    }
+
+    return "🌿";
+  }
 
   if (cargando) {
     return (
@@ -253,8 +597,7 @@ export default function HomePage() {
           </span>
 
           <p className="loadingText">
-            Las nutrias están
-            acomodando el feed...
+            Preparando tu comunidad...
           </p>
         </div>
       </main>
@@ -284,22 +627,13 @@ export default function HomePage() {
         </Link>
 
         <div className="topActions">
-          <div className="searchBox">
-            <span>
-              🔎
-            </span>
-
-            <input
-              type="text"
-              placeholder="Buscar en Uniónutriita..."
-              disabled
-            />
-          </div>
+          <GlobalSearchBar />
 
           <Link
             href="/notificaciones"
             className="circleButton"
             title="Notificaciones"
+            aria-label="Notificaciones"
           >
             🔔
           </Link>
@@ -307,6 +641,8 @@ export default function HomePage() {
           <Link
             href="/perfil"
             className="profileLink"
+            title="Mi perfil"
+            aria-label="Mi perfil"
           >
             <div className="profileButton">
               {perfil?.avatar_url ? (
@@ -345,6 +681,17 @@ export default function HomePage() {
             </span>
 
             Inicio
+          </Link>
+
+          <Link
+            href="/buscar"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔎
+            </span>
+
+            Buscar
           </Link>
 
           <Link
@@ -413,6 +760,38 @@ export default function HomePage() {
             Social
           </Link>
 
+          <p
+            className="sidebarTitle"
+            style={{
+              marginTop:
+                "24px",
+            }}
+          >
+            Tu cuenta
+          </p>
+
+          <Link
+            href="/notificaciones"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              🔔
+            </span>
+
+            Notificaciones
+          </Link>
+
+          <Link
+            href="/perfil"
+            className="menuButton"
+          >
+            <span className="menuIcon">
+              👤
+            </span>
+
+            Mi perfil
+          </Link>
+
           <div className="otterCard">
             <span className="bigOtter">
               🦦
@@ -424,8 +803,7 @@ export default function HomePage() {
               </strong>
 
               <p>
-                Tu rincón
-                universitario
+                Tu rincón universitario
               </p>
             </div>
           </div>
@@ -446,11 +824,11 @@ export default function HomePage() {
               </h2>
 
               <p>
-                Descubre qué está
-                pasando, comparte algo
-                con tus compañeros y
-                encuentra ayuda dentro
-                de la universidad.
+                Descubre qué está pasando,
+                comparte algo con tus
+                compañeros y encuentra
+                ayuda dentro de la
+                universidad.
               </p>
             </div>
 
@@ -462,7 +840,7 @@ export default function HomePage() {
           <section className="news">
             <div className="sectionHeader">
               <p className="tiny">
-                HOY EN EL CAMPUS
+                AHORA EN EL CAMPUS
               </p>
 
               <h3>
@@ -471,67 +849,147 @@ export default function HomePage() {
             </div>
 
             <div className="newsGrid">
-              <article className="card">
+              <Link
+                href="/estudio"
+                className="card"
+                style={{
+                  textDecoration:
+                    "none",
+                }}
+              >
                 <span className="cardIcon">
                   📚
                 </span>
 
                 <small>
-                  Estudio
+                  Último recurso
                 </small>
 
                 <h4>
-                  Comparte tus
-                  apuntes
+                  {recursoReciente
+                    ? recursoReciente.titulo
+                    : "Comparte tus apuntes"}
                 </h4>
 
                 <p>
-                  Recursos y materiales
-                  creados por
-                  estudiantes.
+                  {recursoReciente
+                    ? `Materia: ${recursoReciente.materia}`
+                    : "Todavía no hay recursos compartidos."}
                 </p>
-              </article>
+              </Link>
 
-              <article className="card">
+              {eventoProximo ? (
+                <Link
+                  href={`/eventos/${eventoProximo.id}`}
+                  className="card"
+                  style={{
+                    textDecoration:
+                      "none",
+                  }}
+                >
+                  <span className="cardIcon">
+                    🎉
+                  </span>
+
+                  <small>
+                    Próximo evento
+                  </small>
+
+                  <h4>
+                    {
+                      eventoProximo.titulo
+                    }
+                  </h4>
+
+                  <p>
+                    📍{" "}
+                    {
+                      eventoProximo.lugar
+                    }
+                  </p>
+
+                  <p>
+                    📅{" "}
+                    {new Date(
+                      eventoProximo.fecha_inicio
+                    ).toLocaleString(
+                      "es-MX",
+                      {
+                        day:
+                          "numeric",
+                        month:
+                          "short",
+                        hour:
+                          "numeric",
+                        minute:
+                          "2-digit",
+                      }
+                    )}
+                  </p>
+                </Link>
+              ) : (
+                <Link
+                  href="/eventos"
+                  className="card"
+                  style={{
+                    textDecoration:
+                      "none",
+                  }}
+                >
+                  <span className="cardIcon">
+                    🎉
+                  </span>
+
+                  <small>
+                    Eventos
+                  </small>
+
+                  <h4>
+                    Sin eventos próximos
+                  </h4>
+
+                  <p>
+                    Crea una actividad
+                    para la comunidad.
+                  </p>
+                </Link>
+              )}
+
+              <Link
+                href="/social"
+                className="card"
+                style={{
+                  textDecoration:
+                    "none",
+                }}
+              >
                 <span className="cardIcon">
-                  🫂
+                  {socialReciente
+                    ? iconoSocial(
+                        socialReciente.categoria
+                      )
+                    : "🌿"}
                 </span>
 
                 <small>
-                  Comunidades
+                  Social
                 </small>
 
                 <h4>
-                  Encuentra a tu
-                  salón
+                  {socialReciente
+                    ? socialReciente.titulo
+                    : "Descubre recomendaciones"}
                 </h4>
 
                 <p>
-                  Carreras, semestres
-                  y grupos
-                  universitarios.
+                  {socialReciente
+                    ?.calificacion
+                    ? "⭐".repeat(
+                        socialReciente.calificacion
+                      )
+                    : "Comida, lugares, música, juegos y lecturas."}
                 </p>
-              </article>
-
-              <article className="card">
-                <span className="cardIcon">
-                  🎉
-                </span>
-
-                <small>
-                  Campus
-                </small>
-
-                <h4>
-                  Eventos
-                  universitarios
-                </h4>
-
-                <p>
-                  Actividades y avisos
-                  dentro del campus.
-                </p>
-              </article>
+              </Link>
             </div>
           </section>
 
@@ -557,9 +1015,8 @@ export default function HomePage() {
                   href="/publicar"
                   className="fakeInput"
                 >
-                  ¿Qué quieres
-                  compartir con la
-                  comunidad?
+                  ¿Qué quieres compartir
+                  con la comunidad?
                 </Link>
 
                 <Link
@@ -574,12 +1031,15 @@ export default function HomePage() {
                 <button
                   type="button"
                   className={`feedTab ${
-                    filtro === "Todos"
+                    filtro ===
+                    "Todos"
                       ? "activeTab"
                       : ""
                   }`}
                   onClick={() =>
-                    setFiltro("Todos")
+                    setFiltro(
+                      "Todos"
+                    )
                   }
                 >
                   Para ti
@@ -588,12 +1048,15 @@ export default function HomePage() {
                 <button
                   type="button"
                   className={`feedTab ${
-                    filtro === "Apunte"
+                    filtro ===
+                    "Apunte"
                       ? "activeTab"
                       : ""
                   }`}
                   onClick={() =>
-                    setFiltro("Apunte")
+                    setFiltro(
+                      "Apunte"
+                    )
                   }
                 >
                   📚 Apuntes
@@ -619,12 +1082,15 @@ export default function HomePage() {
                 <button
                   type="button"
                   className={`feedTab ${
-                    filtro === "Ayuda"
+                    filtro ===
+                    "Ayuda"
                       ? "activeTab"
                       : ""
                   }`}
                   onClick={() =>
-                    setFiltro("Ayuda")
+                    setFiltro(
+                      "Ayuda"
+                    )
                   }
                 >
                   🤝 Ayuda
@@ -645,17 +1111,43 @@ export default function HomePage() {
                       🦦
                     </span>
 
-                    No hay publicaciones
-                    en esta categoría
-                    todavía.
+                    <strong>
+                      {filtro ===
+                      "Todos"
+                        ? "Todavía no hay publicaciones"
+                        : `Todavía no hay ${filtro.toLowerCase()}s`}
+                    </strong>
+
+                    <p
+                      style={{
+                        marginBottom:
+                          "14px",
+                      }}
+                    >
+                      {filtro ===
+                      "Todos"
+                        ? "Sé la primera persona en compartir algo con la comunidad."
+                        : "Puedes probar otra categoría o crear una nueva publicación."}
+                    </p>
+
+                    <Link
+                      href="/publicar"
+                      className="primaryButton"
+                    >
+                      Crear publicación
+                    </Link>
                   </div>
                 )}
 
               {postsFiltrados.map(
                 (post) => (
                   <PostCard
-                    key={post.id}
-                    post={post}
+                    key={
+                      post.id
+                    }
+                    post={
+                      post
+                    }
                     currentUserId={
                       currentUserId
                     }
@@ -666,67 +1158,140 @@ export default function HomePage() {
 
             <aside className="trends">
               <h3>
-                Tendencias
+                Actividad
               </h3>
 
               <div className="trend">
                 <span>
-                  🔥
+                  💬
                 </span>
 
                 <div>
                   <p>
-                    Semana de
-                    exámenes
+                    {
+                      estadisticas.publicaciones
+                    }{" "}
+                    publicaciones
                   </p>
 
                   <span>
-                    Comunidad
+                    Feed
                   </span>
                 </div>
               </div>
 
-              <div className="trend">
+              <Link
+                href="/estudio"
+                className="trend"
+                style={{
+                  textDecoration:
+                    "none",
+                }}
+              >
                 <span>
-                  📖
+                  📚
                 </span>
 
                 <div>
                   <p>
-                    Apuntes
-                    compartidos
+                    {
+                      estadisticas.recursos
+                    }{" "}
+                    recursos
                   </p>
 
                   <span>
                     Estudio
                   </span>
                 </div>
-              </div>
+              </Link>
 
-              <div className="trend">
+              <Link
+                href="/eventos"
+                className="trend"
+                style={{
+                  textDecoration:
+                    "none",
+                }}
+              >
                 <span>
-                  🌮
+                  🎉
                 </span>
 
                 <div>
                   <p>
-                    Lugares para
-                    comer
+                    {
+                      estadisticas.eventos
+                    }{" "}
+                    próximos
+                  </p>
+
+                  <span>
+                    Eventos
+                  </span>
+                </div>
+              </Link>
+
+              <Link
+                href="/social"
+                className="trend"
+                style={{
+                  textDecoration:
+                    "none",
+                }}
+              >
+                <span>
+                  🌿
+                </span>
+
+                <div>
+                  <p>
+                    {
+                      estadisticas.social
+                    }{" "}
+                    recomendaciones
                   </p>
 
                   <span>
                     Social
                   </span>
                 </div>
-              </div>
+              </Link>
+
+              <Link
+                href="/buscar"
+                className="trend"
+                style={{
+                  textDecoration:
+                    "none",
+                }}
+              >
+                <span>
+                  🔎
+                </span>
+
+                <div>
+                  <p>
+                    Explorar Uniónutriita
+                  </p>
+
+                  <span>
+                    Buscar
+                  </span>
+                </div>
+              </Link>
             </aside>
           </section>
         </main>
       </div>
 
       <ChatPanel
-        currentUserId={currentUserId}
-        perfil={perfil}
+        currentUserId={
+          currentUserId
+        }
+        perfil={
+          perfil
+        }
       />
 
       <nav className="mobileNav">
@@ -743,13 +1308,13 @@ export default function HomePage() {
           </span>
         </Link>
 
-        <Link href="/estudio">
+        <Link href="/buscar">
           <span>
-            📚
+            🔎
           </span>
 
           <span>
-            Estudio
+            Buscar
           </span>
         </Link>
 
@@ -763,13 +1328,13 @@ export default function HomePage() {
           </span>
         </Link>
 
-        <Link href="/guardados">
+        <Link href="/notificaciones">
           <span>
-            🔖
+            🔔
           </span>
 
           <span>
-            Guardados
+            Actividad
           </span>
         </Link>
 
@@ -786,6 +1351,7 @@ export default function HomePage() {
     </div>
   );
 }
+
 
 
 
